@@ -1,7 +1,6 @@
 import re
 
-from validate_email import validate_email
-from validate_email.exceptions import EmailValidationError
+from email_validator import validate_email, EmailNotValidError
 
 
 def validate_password_strength(password: str) -> str:
@@ -19,18 +18,20 @@ def validate_password_strength(password: str) -> str:
 
 def validate_email_address(email: str) -> str:
     try:
-        is_valid = validate_email(
-            email_address=email,
-            check_regex=True,
-            check_mx=True,
-            from_address='my@from.addr.ess',
-            helo_host='my.host.name',
-            smtp_timeout=10,
-            dns_timeout=10,
-            use_blacklist=True
-        )
-        if not is_valid:
-            raise ValueError("Email address failed validation checks.")
-    except EmailValidationError as error:
-        raise ValueError(str(error))
-    return email
+
+        # Check that the email address is valid. Turn on check_deliverability
+        # for first-time validations like on account creation pages (but not
+        # login pages).
+        emailinfo = validate_email(email, check_deliverability=False)
+
+        # After this point, use only the normalized form of the email address,
+        # especially before going to a database query.
+        email = emailinfo.normalized
+        return email
+
+    except EmailNotValidError as e:
+
+        # The exception message is human-readable explanation of why it's
+        # not a valid (or deliverable) email address.
+        raise ValueError(str(e))
+
