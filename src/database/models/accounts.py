@@ -1,6 +1,6 @@
 ﻿from datetime import date, datetime, timedelta, timezone
 import enum
-import secrets
+from src.utils import generate_secure_token
 from typing import List, Optional
 from sqlalchemy import Boolean, Date, DateTime, Enum, Integer, String, ForeignKey, Text, UniqueConstraint, func
 from src.database.models.base import Base
@@ -105,11 +105,6 @@ class UserProfileModel(Base):
             f"gender={self.gender}, date_of_birth={self.date_of_birth})>"
         )
 
-
-def generate_secure_token(length: int = 32) -> str:
-    return secrets.token_urlsafe(length)
-
-
 class TokenBaseModel(Base):
     __abstract__ = True
 
@@ -154,7 +149,7 @@ class PasswordResetToken(TokenBaseModel):
 class RefreshToken(TokenBaseModel):
     __tablename__ = "refresh_tokens"
 
-    user: Mapped[UserModel] = relationship("UserModel", back_populates="refresh_tokens")
+    user: Mapped[UserModel] = relationship("UserModel", back_populates="refresh_token")
     token: Mapped[str] = mapped_column(
         String(512),
         unique=True,
