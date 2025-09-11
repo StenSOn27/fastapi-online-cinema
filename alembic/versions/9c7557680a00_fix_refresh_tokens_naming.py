@@ -1,8 +1,8 @@
-"""create_user_models
+"""Fix refresh_tokens naming
 
-Revision ID: cc6f05837199
+Revision ID: 9c7557680a00
 Revises: 
-Create Date: 2025-09-04 11:49:06.178854
+Create Date: 2025-09-11 18:29:13.524963
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'cc6f05837199'
+revision: str = '9c7557680a00'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
