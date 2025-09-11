@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.schemas.accounts import UserRegisterRequestSchema
-from database.models.accounts import ActivationTokenModel, UserGroupEnum, UserModel, UserGroupModel
-from database.session_sqlite import get_db
+from src.database.models.accounts import ActivationTokenModel, UserGroupEnum, UserModel, UserGroupModel
+from src.database.session_sqlite import get_db
 from sqlalchemy import select
 from src.utils import hash_password
 

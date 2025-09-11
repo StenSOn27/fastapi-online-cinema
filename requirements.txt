@@ -12,6 +12,7 @@ djangorestframework==3.16.1
 djangorestframework_simplejwt==5.5.1
 dnspython==2.7.0
 drf-spectacular==0.28.0
+email-validator==2.3.0
 fastapi==0.116.1
 fastapi-pagination==0.13.3
 filelock==3.19.1
@@ -29,6 +30,7 @@ mccabe==0.7.0
 numpy==2.3.1
 packaging==25.0
 pandas==2.3.1
+passlib==1.7.4
 pluggy==1.6.0
 py3-validate-email==1.0.5.post2
 pycodestyle==2.14.0
@@ -57,3 +59,4 @@ typing_extensions==4.14.1
 tzdata==2025.2
 uritemplate==4.2.0
 uvicorn==0.35.0
+validate_email==1.3

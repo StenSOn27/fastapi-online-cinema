@@ -3,7 +3,7 @@ import enum
 import secrets
 from typing import List, Optional
 from sqlalchemy import Boolean, Date, DateTime, Enum, Integer, String, ForeignKey, Text, UniqueConstraint, func
-from database.models.base import Base
+from src.database.models.base import Base
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column, relationship
 
