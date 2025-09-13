@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
+from src.crud import get_user_by_email
 from src.schemas.accounts import UserRegisterRequestSchema
 from src.database.models.accounts import ActivationTokenModel, UserGroupEnum, UserModel, UserGroupModel
 from src.database.session_sqlite import get_db
@@ -9,8 +10,7 @@ from src.utils import hash_password
 from src.config.dependencies import get_accounts_email_notificator
 from src.notifications.emails import EmailSenderInterface
 
-
-router = APIRouter()
+router = APIRouter(prefix="/accounts")
 
 @router.post("/register/")
 async def register_user(
@@ -21,13 +21,12 @@ async def register_user(
     email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
 ):
 
-    result = await db.execute(select(UserModel).filter_by(email=user_data.email))
-    existing_user = result.scalars().first()
+    existing_user = await get_user_by_email(db, user_data.email)
 
     if existing_user:
         raise HTTPException(status_code=400, detail="User already exists")
 
-    stmt = select(UserGroupModel).filter(UserGroupModel.id == 1)
+    stmt = select(UserGroupModel).filter_by(name=UserGroupEnum.USER)
     result = await db.execute(stmt)
     user_group = result.scalars().first()
     print(user_group)
