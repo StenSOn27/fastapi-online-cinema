@@ -8,6 +8,7 @@ class BaseAppSettings(BaseSettings):
 
     PATH_TO_EMAIL_TEMPLATES_DIR: str = str(BASE_DIR / "notifications" / "templates")
     ACTIVATION_EMAIL_TEMPLATE_NAME: str = "activation_request.html"
+    ACTIVATION_EMAIL_COMPLETE_TEMPLATE_NAME: str = "activation_complete.html"
 
     EMAIL_HOST: str = os.getenv("EMAIL_HOST", "localhost")
     EMAIL_PORT: int = int(os.getenv("EMAIL_PORT", 1025))
@@ -16,6 +17,6 @@ class BaseAppSettings(BaseSettings):
     EMAIL_USE_TLS: bool = os.getenv("EMAIL_USE_TLS", "False").lower() == "true"
     MAILHOG_API_PORT: int = os.getenv("MAILHOG_API_PORT", 8025)
 
-    SECRET_KEY_ACCESS: str = os.getenv("SECRET_KEY_ACCESS", os.urandom(32))
-    SECRET_KEY_REFRESH: str = os.getenv("SECRET_KEY_REFRESH", os.urandom(32))
+    SECRET_KEY_ACCESS: str = os.getenv("SECRET_KEY_ACCESS", str(os.urandom(32)))
+    SECRET_KEY_REFRESH: str = os.getenv("SECRET_KEY_REFRESH", str(os.urandom(32)))
     JWT_SIGNING_ALGORITHM: str = os.getenv("JWT_SIGNING_ALGORITHM", "HS256")

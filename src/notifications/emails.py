@@ -20,6 +20,7 @@ class EmailSender(EmailSenderInterface):
         use_tls: bool,
         template_dir: str,
         activation_email_template_name: str,
+        activation_email_complete_template_name: str
     ):
         self._hostname = hostname
         self._port = port
@@ -27,6 +28,7 @@ class EmailSender(EmailSenderInterface):
         self._password = password
         self._use_tls = use_tls
         self._activation_email_template_name = activation_email_template_name
+        self._activation_email_complete_template_name = activation_email_complete_template_name
 
         self._env = Environment(loader=FileSystemLoader(template_dir))
 
@@ -52,5 +54,11 @@ class EmailSender(EmailSenderInterface):
     async def send_activation_email(self, email: str, activation_link: str) -> None:
         template = self._env.get_template(self._activation_email_template_name)
         html_content = template.render(email=email, activation_link=activation_link)
+        subject = "Account Activation"
+        await self._send_email(email, subject, html_content)
+
+    async def send_activation_complete_email(self, email: str, login_link: str) -> None:
+        template = self._env.get_template(self._activation_email_complete_template_name)
+        html_content = template.render(email=email, login_link=login_link)
         subject = "Account Activation"
         await self._send_email(email, subject, html_content)
