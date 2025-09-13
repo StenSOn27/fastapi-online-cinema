@@ -1,7 +1,7 @@
 from fastapi import Depends
 from src.notifications.emails import EmailSender, EmailSenderInterface
 from src.config.settings import BaseAppSettings
-import os
+from src.security.token_manager import JWTTokenManager
 
 
 def get_settings() -> BaseAppSettings:
@@ -19,4 +19,13 @@ def get_accounts_email_notificator(
         use_tls=settings.EMAIL_USE_TLS,
         template_dir=settings.PATH_TO_EMAIL_TEMPLATES_DIR,
         activation_email_template_name=settings.ACTIVATION_EMAIL_TEMPLATE_NAME,
+    )
+
+def get_jwt_manager(
+        settings: BaseAppSettings = Depends(get_settings)
+) -> JWTTokenManager:
+    return JWTTokenManager(
+        secret_key_access=settings.SECRET_KEY_ACCESS,
+        secret_key_refresh=settings.SECRET_KEY_REFRESH,
+        algorithm=settings.JWT_SIGNING_ALGORITHM
     )
