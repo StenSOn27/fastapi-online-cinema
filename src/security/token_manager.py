@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+import datetime
 from jose import jwt, JWTError, ExpiredSignatureError
 from src.exceptions.token import TokenExpiredError, InvalidTokenError
 
@@ -15,14 +15,14 @@ class JWTTokenManager:
     def _create_token(
         self, data: dict,
         secret_key: str,
-        expires_delta: timedelta = None,
+        expires_delta: datetime.timedelta = None,
         algorithm: str = None
     ) -> str:
         to_encode = data.copy()
         if expires_delta:
-            expire = datetime.now(datetime.timezone.utc) + expires_delta
+            expire = datetime.datetime.now(datetime.timezone.utc) + expires_delta
         else:
-            expire = datetime.now(datetime.timezone.utc) + timedelta(minutes=15)
+            expire = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=15)
         to_encode.update({"exp": expire})
         encoded_jwt = jwt.encode(to_encode, secret_key, algorithm=algorithm)
         return encoded_jwt
@@ -52,15 +52,15 @@ class JWTTokenManager:
         except JWTError:
             raise InvalidTokenError
 
-    def verify_refresh_token(self, token: str) -> None:
-        self.decode_refresh_token(
+    def decode_refresh_token(self, token: str):
+        return self.decode_token(
             token,
             self._secret_key_refresh,
             self._algorithm
         )
 
-    def verify_access_token(self, token: str) -> None:
-        self.decode_access_token(
+    def decode_access_token(self, token: str):
+        return self.decode_token(
             token,
             self._secret_key_access,
             self._algorithm
