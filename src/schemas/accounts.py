@@ -1,4 +1,5 @@
-from pydantic import BaseModel, EmailStr, field_validator
+from typing import Annotated
+from pydantic import BaseModel, EmailStr, StringConstraints, field_validator
 from src.database.validators import validate_password_strength, validate_email_address
 
 
@@ -22,4 +23,25 @@ class BaseEmailPasswordSchema(BaseModel):
 
 
 class UserRegisterRequestSchema(BaseEmailPasswordSchema):
+    pass
+
+
+class UserResetPasswordSchema(BaseEmailPasswordSchema):
+    email: EmailStr
+
+
+class ChangePasswordSchema(BaseModel):
+    email: EmailStr
+    old_password: str
+    new_password:Annotated[
+                    str,
+                    StringConstraints(min_length=8)
+                ]
+
+
+class PasswordResetCompleteRequestSchema(BaseEmailPasswordSchema):
+    token: str
+
+
+class UserLoginSchema(BaseEmailPasswordSchema):
     pass

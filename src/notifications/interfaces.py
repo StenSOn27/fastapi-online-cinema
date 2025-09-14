@@ -24,3 +24,15 @@ class EmailSenderInterface(ABC):
             login_link (str): The login link to include in the email.
         """
         pass
+
+    @abstractmethod
+    async def send_password_reset_email(self, email, reset_link: str) -> None:
+        pass
+    
+    @abstractmethod
+    async def send_password_reset_complete_email(self, email, login_link: str) -> None:
+        pass
+    
+    @abstractmethod
+    async def send_password_change_complete_email(self, email, login_link: str) -> None:
+        pass

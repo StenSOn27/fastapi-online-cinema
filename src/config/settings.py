@@ -9,6 +9,9 @@ class BaseAppSettings(BaseSettings):
     PATH_TO_EMAIL_TEMPLATES_DIR: str = str(BASE_DIR / "notifications" / "templates")
     ACTIVATION_EMAIL_TEMPLATE_NAME: str = "activation_request.html"
     ACTIVATION_EMAIL_COMPLETE_TEMPLATE_NAME: str = "activation_complete.html"
+    PASSWORD_RESET_TEMLATE_NAME: str = "password_reset_request.html"
+    PASSWORD_RESET_COMPLETE_TEMLATE_NAME: str = "password_reset_complete.html"
+    PASSWORD_CHANGE_COMPLETE_TEMLATE_NAME: str = "password_change_complete.html"
 
     EMAIL_HOST: str = os.getenv("EMAIL_HOST", "localhost")
     EMAIL_PORT: int = int(os.getenv("EMAIL_PORT", 1025))
