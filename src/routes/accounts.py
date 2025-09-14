@@ -108,7 +108,7 @@ async def activate_user(
     stmt = select(ActivationTokenModel).options(selectinload(ActivationTokenModel.user))
     result = await db.execute(stmt.filter_by(token=token))
     activation_token = result.scalars().first()
-    print(activation_token)
+
     if not activation_token:
         raise HTTPException(status_code=400, detail="Invalid or expired activation token.")
 
@@ -136,6 +136,56 @@ async def activate_user(
             login_link
         )
         return {"message": "Account activated successfully."}
+
+
+@router.post("/resend-activation")
+async def resend_activation(
+    email: str, request: Request,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator)
+):
+    try:
+        user = await get_user_by_email(db, email)
+        if not user or user.is_active:
+            raise HTTPException(status_code=400, detail="User account is not registered or account is already active.")
+        existing_token_result = await db.execute(
+            select(ActivationTokenModel).filter_by(user=user)
+        )
+        existing_token = existing_token_result.scalars().first()
+        expires_at_aware = existing_token.expires_at.replace(tzinfo=datetime.timezone.utc)
+        if expires_at_aware > datetime.datetime.now(datetime.timezone.utc):
+            raise HTTPException(
+                status_code=400,
+                detail="Activation token is still valid. Please check your email.",
+            )
+        await db.delete(existing_token)
+        await db.flush()
+
+        activation_token = ActivationTokenModel(user=user)
+        db.add(activation_token)
+        await db.flush()
+        await db.refresh(activation_token)
+        token_value = activation_token.token
+
+        await db.commit()
+        await db.refresh(user)
+
+    except SQLAlchemyError as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred during activation token creation."
+        ) from e
+    else:
+        BASE_URL = str(request.base_url)
+        activation_link = f"{BASE_URL}accounts/activate/?token={token_value}"
+        background_tasks.add_task(
+            email_sender.send_activation_email,
+            str(email),
+            activation_link
+        )
+        return {"message": "Please check your email to activate your account.",}
 
 
 @router.post("/change-password")
