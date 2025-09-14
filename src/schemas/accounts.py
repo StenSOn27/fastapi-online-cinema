@@ -26,7 +26,7 @@ class UserRegisterRequestSchema(BaseEmailPasswordSchema):
     pass
 
 
-class UserResetPasswordSchema(BaseEmailPasswordSchema):
+class UserResetPasswordSchema(BaseModel):
     email: EmailStr
 
 
@@ -39,9 +39,22 @@ class ChangePasswordSchema(BaseModel):
                 ]
 
 
-class PasswordResetCompleteRequestSchema(BaseEmailPasswordSchema):
+class PasswordResetCompleteRequestSchema(BaseModel):
     token: str
-
+    new_password: str
 
 class UserLoginSchema(BaseEmailPasswordSchema):
     pass
+
+
+class TokenRefreshRequestSchema(BaseEmailPasswordSchema):
+    token: str
+
+
+class UserLoginResponseSchema(BaseModel):
+    access_token: str
+    refresh_token: str
+
+
+class TokenRefreshResponseSchema(BaseModel):
+    access_token: str
