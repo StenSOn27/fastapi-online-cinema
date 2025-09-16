@@ -153,14 +153,15 @@ async def resend_activation(
             select(ActivationTokenModel).filter_by(user=user)
         )
         existing_token = existing_token_result.scalars().first()
-        expires_at_aware = existing_token.expires_at.replace(tzinfo=datetime.timezone.utc)
-        if expires_at_aware > datetime.datetime.now(datetime.timezone.utc):
-            raise HTTPException(
-                status_code=400,
-                detail="Activation token is still valid. Please check your email.",
-            )
-        await db.delete(existing_token)
-        await db.flush()
+        if existing_token:
+            expires_at_aware = existing_token.expires_at.replace(tzinfo=datetime.timezone.utc)
+            if expires_at_aware > datetime.datetime.now(datetime.timezone.utc):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Activation token is still valid. Please check your email.",
+                )
+            await db.delete(existing_token)
+            await db.flush()
 
         activation_token = ActivationTokenModel(user=user)
         db.add(activation_token)
