@@ -1,0 +1,37 @@
+
+services:
+
+  web:
+    build: .
+    ports:
+      - 8004:8000
+    command: uvicorn src.main:app --host 0.0.0.0 --reload
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+
+  celery:
+    build: .
+    command: celery -A src.celery_scheduler.celery worker --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+
+  celery-beat:
+    build: .
+    command: celery -A src.celery_scheduler.celery beat --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "8025:8025"
+      - "1025:1025"

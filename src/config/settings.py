@@ -13,7 +13,7 @@ class BaseAppSettings(BaseSettings):
     PASSWORD_RESET_COMPLETE_TEMLATE_NAME: str = "password_reset_complete.html"
     PASSWORD_CHANGE_COMPLETE_TEMLATE_NAME: str = "password_change_complete.html"
 
-    EMAIL_HOST: str = os.getenv("EMAIL_HOST", "localhost")
+    EMAIL_HOST: str = os.getenv("EMAIL_HOST", "mailhog")
     EMAIL_PORT: int = int(os.getenv("EMAIL_PORT", 1025))
     EMAIL_HOST_USER: str = os.getenv("EMAIL_HOST_USER", "testuser")
     EMAIL_HOST_PASSWORD: str = os.getenv("EMAIL_HOST_PASSWORD", "test_password")
