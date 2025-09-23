@@ -19,6 +19,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 's
 
 from database.models.base import Base
 from database.models.accounts import *
+from database.models.movies import *
 
 print("🧪 Alembic sees tables:", Base.metadata.tables.keys())
 # Alembic Config object
