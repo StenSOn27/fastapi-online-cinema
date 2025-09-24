@@ -1,12 +1,12 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException
 from sqlalchemy import select
-from database.models.accounts import UserModel
+from src.database.models.accounts import UserModel
 from src.notifications.emails import EmailSender, EmailSenderInterface
 from src.config.settings import BaseAppSettings
 from src.security.token_manager import JWTTokenManager
 from fastapi.security import OAuth2PasswordBearer
 from src.schemas.accounts import UserRetrieveSchema
-from database import get_db
+from src.database.session_sqlite import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 
 

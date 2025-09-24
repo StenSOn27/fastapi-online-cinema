@@ -1,16 +1,16 @@
 import datetime
-from sqlalchemy import (
-    Boolean, Column, DateTime, Integer, String, Text, ForeignKey,
-    Table, UniqueConstraint, DECIMAL, Enum
-)
-from database.models.accounts import UserModel
-from src.database.models.base import Base
-from sqlalchemy.orm import (
-    Mapped, mapped_column, relationship
-)
 import uuid
 from uuid import UUID
-from enum import Enum as PyEnum
+from typing import TYPE_CHECKING, List, Optional
+from sqlalchemy import (
+    Boolean, Column, DateTime, Integer, String, Text, ForeignKey,
+    Table, UniqueConstraint, DECIMAL
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from src.database.models.base import Base
+
+if TYPE_CHECKING:
+    from src.database.models.accounts import UserModel
 
 movie_genres = Table(
     "movie_genres",
@@ -40,7 +40,7 @@ class Genre(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
 
-    movies: Mapped[list["Movie"]] = relationship(
+    movies: Mapped[List["Movie"]] = relationship(
         secondary=movie_genres,
         back_populates="genres"
     )
@@ -52,7 +52,7 @@ class Star(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
 
-    movies: Mapped[list["Movie"]] = relationship(
+    movies: Mapped[List["Movie"]] = relationship(
         secondary=movie_stars,
         back_populates="stars"
     )
@@ -64,7 +64,7 @@ class Director(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
 
-    movies: Mapped[list["Movie"]] = relationship(
+    movies: Mapped[List["Movie"]] = relationship(
         secondary=movie_directors,
         back_populates="directors"
     )
@@ -76,7 +76,7 @@ class Certification(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
 
-    movies: Mapped[list["Movie"]] = relationship(
+    movies: Mapped[List["Movie"]] = relationship(
         back_populates="certification"
     )
 
@@ -94,8 +94,8 @@ class Movie(Base):
     time: Mapped[int] = mapped_column(nullable=False)
     imdb: Mapped[float] = mapped_column(nullable=False)
     votes: Mapped[int] = mapped_column(nullable=False)
-    meta_score: Mapped[float | None] = mapped_column(nullable=True)
-    gross: Mapped[float | None] = mapped_column(nullable=True)
+    meta_score: Mapped[Optional[float]] = mapped_column(nullable=True)
+    gross: Mapped[Optional[float]] = mapped_column(nullable=True)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     price: Mapped[float] = mapped_column(DECIMAL(10, 2), nullable=False)
     certification_id: Mapped[int] = mapped_column(ForeignKey("certifications.id"), nullable=False)
@@ -114,10 +114,20 @@ class Movie(Base):
         back_populates="movies"
     )
 
+    favorited_by: Mapped[List["Favorite"]]
+    ratings: Mapped[List["Rating"]]
+    likes: Mapped[List["MovieLike"]]
+
+
 class Favorite(Base):
     __tablename__ = "favorites"
+    __table_args__ = (UniqueConstraint("user_id", "movie_id", name="uq_user_movie_favorite"),)
+
     user_id = Column(ForeignKey("users.id"), primary_key=True)
     movie_id = Column(ForeignKey("movies.id"), primary_key=True)
+
+    user = relationship("UserModel", back_populates="favorites")
+    movie = relationship("Movie", back_populates="favorited_by")
 
 
 class MovieLike(Base):
@@ -137,6 +147,7 @@ class MovieLike(Base):
 
 class Comment(Base):
     __tablename__ = "comments"
+
     id = Column(Integer, primary_key=True)
     user_id = Column(ForeignKey("users.id"))
     movie_id = Column(ForeignKey("movies.id"))
@@ -146,9 +157,16 @@ class Comment(Base):
 
 class Rating(Base):
     __tablename__ = "ratings"
+    __table_args__ = (
+        UniqueConstraint("user_id", "movie_id", name="unique_user_movie_rating"),
+    )
+
     user_id = Column(ForeignKey("users.id"), primary_key=True)
     movie_id = Column(ForeignKey("movies.id"), primary_key=True)
     rating = Column(Integer)
+
+    user = relationship("UserModel", back_populates="ratings")
+    movie = relationship("Movie", back_populates="ratings")
 
 
 class Notification(Base):

@@ -3,9 +3,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
-from database.models.accounts import UserModel
-from schemas.accounts import UserRetrieveSchema
-from schemas.movies import CommentCreate, CommentRetrieve, GenreCount, MovieListItem, MovieRetrieve
+from src.database.models.accounts import UserModel
+from src.schemas.accounts import UserRetrieveSchema
+from src.schemas.movies import CommentCreate, CommentRetrieve, GenreCount, MovieListItem, MovieRetrieve
 from src.database.models.movies import Comment, Director, Favorite, Genre, Movie, MovieLike, Rating, Star, movie_genres
 from src.config.dependencies import get_db, get_current_user
 from sqlalchemy.exc import IntegrityError

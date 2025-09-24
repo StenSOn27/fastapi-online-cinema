@@ -1,11 +1,13 @@
 ﻿from datetime import date, datetime, timedelta, timezone
 import enum
 from src.utils import generate_secure_token
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 from sqlalchemy import Boolean, Date, DateTime, Enum, Integer, String, ForeignKey, Text, UniqueConstraint, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.database.models.base import Base
-from sqlalchemy.orm import Mapped
-from sqlalchemy.orm import mapped_column, relationship
+
+if TYPE_CHECKING:
+    from src.database.models.movies import Favorite, Rating
 
 
 class UserGroupEnum(str, enum.Enum):
@@ -68,7 +70,10 @@ class UserModel(Base):
         back_populates="user",
         cascade="all, delete-orphan"
     )
-    
+
+    favorites: Mapped[List["Favorite"]]
+    ratings: Mapped[List["Rating"]]
+
     def __repr__(self):
         return f"<UserModel(id={self.id}, email={self.email}, is_active={self.is_active})>"
     
@@ -149,10 +154,9 @@ class PasswordResetToken(TokenBaseModel):
 class RefreshToken(TokenBaseModel):
     __tablename__ = "refresh_tokens"
 
-    user: Mapped[UserModel] = relationship("UserModel", back_populates="refresh_token")
-    token: Mapped[str] = mapped_column(
-        String(512),
-        unique=True,
-        nullable=False,
-        default=generate_secure_token
-    )
+    user: Mapped["UserModel"] = relationship("UserModel", back_populates="refresh_token")
+    token: Mapped[str] = mapped_column(String(512), unique=True, nullable=False, default=generate_secure_token)
+
+
+UserModel.favorites = relationship("Favorite", back_populates="user", cascade="all, delete-orphan")
+UserModel.ratings = relationship("Rating", back_populates="user", cascade="all, delete-orphan")
