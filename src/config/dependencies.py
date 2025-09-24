@@ -1,7 +1,13 @@
-from fastapi import Depends
+from fastapi import Depends, HTTPException, status
+from sqlalchemy import select
+from database.models.accounts import UserModel
 from src.notifications.emails import EmailSender, EmailSenderInterface
 from src.config.settings import BaseAppSettings
 from src.security.token_manager import JWTTokenManager
+from fastapi.security import OAuth2PasswordBearer
+from src.schemas.accounts import UserRetrieveSchema
+from database import get_db
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 def get_settings() -> BaseAppSettings:
@@ -33,3 +39,26 @@ def get_jwt_manager(
         secret_key_refresh=settings.SECRET_KEY_REFRESH,
         algorithm=settings.JWT_SIGNING_ALGORITHM
     )
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db),
+    jwt_manager: JWTTokenManager = Depends(get_jwt_manager)
+) -> UserRetrieveSchema:
+    payload = jwt_manager.decode_access_token(token)
+    if payload is None:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    user_id = payload.get("user_id")
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    db_user = await db.execute(select(UserModel).where(UserModel.id == user_id))
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return UserRetrieveSchema.model_validate(db_user)
+
+async def require_admin(current_user: UserRetrieveSchema = Depends(get_current_user)):
+    if current_user.group_id != 3:
+        raise HTTPException(status_code=403, detail="Access forbidden: admins only")
+    return current_user
