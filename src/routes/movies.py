@@ -215,3 +215,30 @@ async def get_genres_with_counts(
     result = await db.execute(stmt)
     rows = result.all()
     return [GenreCount(id=row.id, name=row.name, movie_count=row.movie_count) for row in rows]
+
+@router.post("/{movie_id}/rate")
+async def rate_movie(
+    movie_id: int,
+    rating: int,
+    db: AsyncSession = Depends(get_db),
+    user: UserModel = Depends(get_current_user),
+):
+    if not (1 <= rating <= 10):
+        raise HTTPException(status_code=400, detail="Rating must be between 1 and 10")
+
+    movie = await db.get(Movie, movie_id)
+    if not movie:
+        raise HTTPException(status_code=404, detail="Movie not found")
+
+    stmt = select(Rating).where(Rating.user_id == user.id, Rating.movie_id == movie_id)
+    result = await db.execute(stmt)
+    rating = result.scalars().first()
+
+    if rating:
+        rating.rating = rating
+    else:
+        rating = Rating(user_id=user.id, movie_id=movie_id, rating=rating)
+        db.add(rating)
+
+    await db.commit()
+    return {"message": "Rating saved"}
