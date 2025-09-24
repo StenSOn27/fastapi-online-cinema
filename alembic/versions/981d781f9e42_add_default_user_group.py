@@ -20,9 +20,32 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade():
     op.execute(
-        "INSERT INTO user_groups (name) "
-        "SELECT 'USER' WHERE NOT EXISTS (SELECT 1 FROM user_groups WHERE name='USER')"
+        """
+        INSERT INTO user_groups (name)
+        SELECT 'USER' WHERE NOT EXISTS (
+            SELECT 1 FROM user_groups WHERE name = 'USER'
+        );
+        """
+    )
+    op.execute(
+        """
+        INSERT INTO user_groups (name)
+        SELECT 'MODERATOR' WHERE NOT EXISTS (
+            SELECT 1 FROM user_groups WHERE name = 'MODERATOR'
+        );
+        """
+    )
+    op.execute(
+        """
+        INSERT INTO user_groups (name)
+        SELECT 'ADMIN' WHERE NOT EXISTS (
+            SELECT 1 FROM user_groups WHERE name = 'ADMIN'
+        );
+        """
     )
 
+
 def downgrade():
-    op.execute("DELETE FROM user_groups WHERE name='user'")
+    op.execute("DELETE FROM user_groups WHERE name='USER'")
+    op.execute("DELETE FROM user_groups WHERE name='MODERATOR'")
+    op.execute("DELETE FROM user_groups WHERE name='ADMIN'")
