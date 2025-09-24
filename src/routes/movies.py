@@ -1,11 +1,12 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
+import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.models.accounts import UserModel
 from schemas.accounts import UserRetrieveSchema
 from schemas.movies import CommentCreate, CommentRetrieve, MovieListItem, MovieRetrieve
-from src.database.models.movies import Comment, Movie, MovieLike
+from src.database.models.movies import Comment, Director, Movie, MovieLike, Star
 from src.config.dependencies import get_db, get_current_user
 from sqlalchemy.exc import IntegrityError
 
@@ -14,11 +15,53 @@ router = APIRouter(prefix="/movies")
 
 @router.get("/", response_model=List[MovieListItem])
 async def movies_list(
-        db: AsyncSession = Depends(get_db),
-        limit: int = Query(10, ge=0),
-        offset: int = Query(0, ge=0)
-) -> List:
-    return [movie for movie in await db.scalars(select(Movie).limit(limit).offset(offset))]
+    db: AsyncSession = Depends(get_db),
+    limit: int = Query(10, ge=1),
+    offset: int = Query(0, ge=0),
+    year: int | None = Query(None),
+    min_rating: float | None = Query(None),
+    max_rating: float | None = Query(None),
+    search: str | None = Query(None),
+    sort_by: str = Query("release_date"),
+    sort_order: str = Query("desc"),
+):
+    stmt = select(Movie).distinct()
+
+    if search:
+        stmt = stmt.join(Movie.directors, isouter=True).join(Movie.stars, isouter=True)
+        stmt = stmt.where(
+            sa.or_(
+                Movie.name.ilike(f"%{search}%"),
+                Movie.description.ilike(f"%{search}%"),
+                Director.name.ilike(f"%{search}%"),
+                Star.name.ilike(f"%{search}%")
+            )
+        )
+
+    if year:
+        stmt = stmt.where(Movie.year == year)
+    if min_rating:
+        stmt = stmt.where(Movie.imdb >= min_rating)
+    if max_rating:
+        stmt = stmt.where(Movie.imdb <= max_rating)
+
+    sort_fields = {
+        "release_date": Movie.year,
+        "price": Movie.price,
+        "rating": Movie.imdb,
+        "popularity": Movie.votes,
+    }
+
+    sort_column = sort_fields.get(sort_by, Movie.year)
+    if sort_order == "desc":
+        stmt = stmt.order_by(sort_column.desc())
+    stmt = stmt.order_by(sort_column.asc())
+
+    stmt = stmt.limit(limit).offset(offset)
+
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
 
 @router.get("/{movie_id}/", response_model=MovieRetrieve)
 async def get_movie(
