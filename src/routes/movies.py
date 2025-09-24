@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database.models.accounts import UserModel
 from schemas.accounts import UserRetrieveSchema
 from schemas.movies import CommentCreate, CommentRetrieve, MovieListItem, MovieRetrieve
-from src.database.models.movies import Comment, Director, Movie, MovieLike, Star
+from src.database.models.movies import Comment, Director, Favorite, Movie, MovieLike, Star
 from src.config.dependencies import get_db, get_current_user
 from sqlalchemy.exc import IntegrityError
 
@@ -148,3 +148,52 @@ async def get_comments(
 
     comments = result.scalars().all()
     return comments
+
+@router.post("/favorites/{movie_id}", status_code=201)
+async def add_to_favorites(
+    movie_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: UserRetrieveSchema = Depends(get_current_user),
+):
+    movie = await db.scalar(select(Movie).where(Movie.id == movie_id))
+    if not movie:
+        raise HTTPException(status_code=404, detail="Movie not found")
+
+    existing = await db.scalar(
+        select(Favorite).where(Favorite.user_id == user.id, Favorite.movie_id == movie_id)
+    )
+    if existing:
+        raise HTTPException(status_code=400, detail="Already in favorites")
+
+    db.add(Favorite(user_id=user.id, movie_id=movie_id))
+    await db.commit()
+    return {"message": "Movie added to favorites"}
+
+@router.delete("/favorites/{movie_id}", status_code=204)
+async def remove_from_favorites(
+    movie_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: UserRetrieveSchema = Depends(get_current_user),
+):
+    favorite = await db.scalar(
+        select(Favorite).where(Favorite.user_id == user.id, Favorite.movie_id == movie_id)
+    )
+    if not favorite:
+        raise HTTPException(status_code=404, detail="Favorite not found")
+
+    await db.delete(favorite)
+    await db.commit()
+
+@router.get("/favorites", response_model=List[MovieListItem])
+async def get_favorite_movies(
+    db: AsyncSession = Depends(get_db),
+    user: UserRetrieveSchema = Depends(get_current_user),
+):
+    stmt = (
+        select(Movie)
+        .join(Favorite, Movie.id == Favorite.movie_id)
+        .where(Favorite.user_id == user.id)
+        .order_by(Favorite.created_at.desc())
+    )
+    result = await db.execute(stmt)
+    return result.scalars().all()
