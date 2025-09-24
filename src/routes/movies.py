@@ -1,10 +1,11 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
-from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
-from schemas.movies import MovieListItem, MovieRetrieve
-from src.database.models.movies import Movie, MovieLike, ReactionType, User
+from database.models.accounts import UserModel
+from schemas.accounts import UserRetrieveSchema
+from schemas.movies import CommentCreate, CommentRetrieve, MovieListItem, MovieRetrieve
+from src.database.models.movies import Comment, Movie, MovieLike
 from src.config.dependencies import get_db, get_current_user
 from sqlalchemy.exc import IntegrityError
 
@@ -30,7 +31,7 @@ async def get_movie(
 async def like_movie(
     movie_id: int,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: UserRetrieveSchema = Depends(get_current_user)
 ) -> dict:
 
     movie = (await db.scalars(select(Movie).where(Movie.id == movie_id))).first()
@@ -51,7 +52,7 @@ async def like_movie(
 async def dislike_movie(
     movie_id: int,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: UserRetrieveSchema = Depends(get_current_user)
 ) -> dict:
 
     movie = (await db.scalars(select(Movie).where(Movie.id == movie_id))).first()
@@ -68,3 +69,39 @@ async def dislike_movie(
 
     return {"message": "Movie disliked"}
 
+@router.post("/{movie_id}/comments", response_model=CommentRetrieve, status_code=201)
+async def create_comment(
+    movie_id: int,
+    comment_data: CommentCreate,
+    db: AsyncSession = Depends(get_db),
+    user: UserRetrieveSchema = Depends(get_current_user)
+):
+
+    movie = await db.get(Movie, movie_id)
+    if not movie:
+        raise HTTPException(status_code=404, detail="Movie not found")
+
+    comment = Comment(
+        user_id=user.id,
+        movie_id=movie_id,
+        text=comment_data.text
+    )
+    db.add(comment)
+    await db.commit()
+    await db.refresh(comment)
+    return comment
+
+@router.get("/{movie_id}/comments", response_model=List[CommentRetrieve])
+async def get_comments(
+    movie_id: int,
+    db: AsyncSession = Depends(get_db)
+) -> List[CommentRetrieve]:
+
+    result = await db.execute(
+        select(Comment)
+        .where(Comment.movie_id == movie_id)
+        .order_by(Comment.created_at.desc())
+    )
+
+    comments = result.scalars().all()
+    return comments

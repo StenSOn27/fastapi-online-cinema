@@ -1,5 +1,6 @@
+import datetime
 from typing import List, Optional
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from uuid import UUID
 
 
@@ -30,5 +31,18 @@ class MovieRetrieve(BaseModel):
     genres: List[str]
     directors: List[str]
     stars: List[str]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CommentCreate(BaseModel):
+    text: str = Field(..., min_length=1, max_length=1000)
+
+class CommentRetrieve(BaseModel):
+    id: int
+    user_id: int
+    movie_id: int
+    text: str
+    created_at: datetime.datetime
 
     model_config = ConfigDict(from_attributes=True)
