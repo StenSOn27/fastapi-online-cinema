@@ -5,8 +5,8 @@ import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.models.accounts import UserModel
 from schemas.accounts import UserRetrieveSchema
-from schemas.movies import CommentCreate, CommentRetrieve, MovieListItem, MovieRetrieve
-from src.database.models.movies import Comment, Director, Favorite, Movie, MovieLike, Star
+from schemas.movies import CommentCreate, CommentRetrieve, GenreCount, MovieListItem, MovieRetrieve
+from src.database.models.movies import Comment, Director, Favorite, Genre, Movie, MovieLike, Rating, Star, movie_genres
 from src.config.dependencies import get_db, get_current_user
 from sqlalchemy.exc import IntegrityError
 
@@ -197,3 +197,21 @@ async def get_favorite_movies(
     )
     result = await db.execute(stmt)
     return result.scalars().all()
+
+@router.get("/genres/", response_model=List[GenreCount])
+async def get_genres_with_counts(
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = (
+        select(
+            Genre.id,
+            Genre.name,
+            sa.func.count(movie_genres.c.movie_id).label("movie_count")
+        )
+        .join(movie_genres, movie_genres.c.genre_id == Genre.id, isouter=True)
+        .group_by(Genre.id)
+        .order_by(sa.desc("movie_count"))
+    )
+    result = await db.execute(stmt)
+    rows = result.all()
+    return [GenreCount(id=row.id, name=row.name, movie_count=row.movie_count) for row in rows]
