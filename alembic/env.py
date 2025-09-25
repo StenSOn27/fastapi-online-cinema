@@ -1,13 +1,6 @@
-from logging.config import fileConfig
-
 from sqlalchemy.ext.asyncio import async_engine_from_config
-
-from sqlalchemy import pool
-
-from alembic import context
-
-
 import asyncio
+
 from logging.config import fileConfig
 from sqlalchemy import pool
 from alembic import context
@@ -17,9 +10,9 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 
-from database.models.base import Base
-from database.models.accounts import *
-from database.models.movies import *
+from src.database.models.base import Base
+from src.database.models.accounts import *
+from src.database.models.movies import *
 
 print("🧪 Alembic sees tables:", Base.metadata.tables.keys())
 # Alembic Config object

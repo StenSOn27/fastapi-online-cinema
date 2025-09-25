@@ -3,7 +3,7 @@ from sqlalchemy import (
     Boolean, Column, DateTime, Integer, String, Text, ForeignKey,
     Table, UniqueConstraint, DECIMAL, Enum
 )
-from database.models.accounts import UserModel
+from src.database.models.accounts import UserModel
 from src.database.models.base import Base
 from sqlalchemy.orm import (
     Mapped, mapped_column, relationship
