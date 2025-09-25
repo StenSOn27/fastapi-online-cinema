@@ -1,7 +1,7 @@
 import datetime
 import uuid
 from uuid import UUID
-from typing import TYPE_CHECKING, List, Optional
+from typing import List, Optional
 from sqlalchemy import (
     Boolean, Column, DateTime, Integer, String, Text, ForeignKey,
     Table, UniqueConstraint, DECIMAL
@@ -9,14 +9,13 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.database.models.base import Base
 
-if TYPE_CHECKING:
-    from src.database.models.accounts import UserModel
 
 movie_genres = Table(
     "movie_genres",
     Base.metadata,
     Column("movie_id", ForeignKey("movies.id"), primary_key=True),
     Column("genre_id", ForeignKey("genres.id"), primary_key=True),
+    extend_existing=True
 )
 
 movie_stars = Table(
@@ -24,6 +23,7 @@ movie_stars = Table(
     Base.metadata,
     Column("movie_id", ForeignKey("movies.id"), primary_key=True),
     Column("star_id", ForeignKey("stars.id"), primary_key=True),
+    extend_existing=True
 )
 
 movie_directors = Table(
@@ -31,6 +31,7 @@ movie_directors = Table(
     Base.metadata,
     Column("movie_id", ForeignKey("movies.id"), primary_key=True),
     Column("director_id", ForeignKey("directors.id"), primary_key=True),
+    extend_existing=True
 )
 
 
@@ -113,10 +114,6 @@ class Movie(Base):
         secondary=movie_directors,
         back_populates="movies"
     )
-
-    favorited_by: Mapped[List["Favorite"]]
-    ratings: Mapped[List["Rating"]]
-    likes: Mapped[List["MovieLike"]]
 
 
 class Favorite(Base):
