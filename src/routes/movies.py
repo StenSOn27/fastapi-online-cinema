@@ -8,6 +8,8 @@ from src.schemas.accounts import UserRetrieveSchema
 from src.schemas.movies import CommentCreate, CommentRetrieve, GenreCount, MovieListItem, MovieRetrieve
 from src.database.models.movies import Comment, Director, Favorite, Genre, Movie, MovieLike, Rating, Star, movie_genres
 from src.config.dependencies import get_db, get_current_user
+
+from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 
 
@@ -64,11 +66,37 @@ async def movies_list(
 
 
 @router.get("/{movie_id}/", response_model=MovieRetrieve)
-async def get_movie(
-    movie_id: int, db: AsyncSession = Depends(get_db)
-) -> MovieRetrieve:
-    movie = (await db.scalars(select(Movie).where(Movie.id == movie_id))).first()
-    return MovieRetrieve.model_validate(movie)
+async def get_movie(movie_id: int, db: AsyncSession = Depends(get_db)) -> MovieRetrieve:
+    stmt = select(Movie).options(
+        selectinload(Movie.certification),
+        selectinload(Movie.genres),
+        selectinload(Movie.directors),
+        selectinload(Movie.stars),
+    ).where(Movie.id == movie_id)
+
+    result = await db.execute(stmt)
+    movie = result.scalar_one_or_none()
+
+    if movie is None:
+        raise HTTPException(status_code=404, detail="Movie not found")
+
+    return MovieRetrieve(
+        id=movie.id,
+        uuid=movie.uuid,
+        name=movie.name,
+        year=movie.year,
+        time=movie.time,
+        imdb=movie.imdb,
+        votes=movie.votes,
+        meta_score=movie.meta_score,
+        gross=movie.gross,
+        description=movie.description,
+        price=movie.price,
+        certification=movie.certification.name,
+        genres=[g.name for g in movie.genres],
+        directors=[d.name for d in movie.directors],
+        stars=[s.name for s in movie.stars],
+    )
 
 @router.post("/{movie_id}/like")
 async def like_movie(

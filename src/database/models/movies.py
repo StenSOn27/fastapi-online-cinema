@@ -1,4 +1,5 @@
 import datetime
+from typing import List
 from sqlalchemy import (
     Boolean, Column, DateTime, Integer, String, Text, ForeignKey,
     Table, UniqueConstraint, DECIMAL, Enum
@@ -100,7 +101,9 @@ class Movie(Base):
     price: Mapped[float] = mapped_column(DECIMAL(10, 2), nullable=False)
     certification_id: Mapped[int] = mapped_column(ForeignKey("certifications.id"), nullable=False)
 
+    likes: Mapped[List["MovieLike"]] = relationship("MovieLike", back_populates="movie")
     certification: Mapped["Certification"] = relationship(back_populates="movies")
+
     genres: Mapped[list["Genre"]] = relationship(
         secondary=movie_genres,
         back_populates="movies"
