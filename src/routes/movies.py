@@ -10,7 +10,6 @@ from src.database.models.movies import Comment, Director, Favorite, Genre, Movie
 from src.config.dependencies import get_db, get_current_user
 
 from sqlalchemy.orm import selectinload
-from sqlalchemy.exc import IntegrityError
 
 
 router = APIRouter(prefix="/movies")
@@ -64,6 +63,23 @@ async def movies_list(
     result = await db.execute(stmt)
     return result.scalars().all()
 
+@router.get("/genres/", response_model=List[GenreCount])
+async def get_genres_with_counts(
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = (
+        select(
+            Genre.id,
+            Genre.name,
+            sa.func.count(movie_genres.c.movie_id).label("movie_count")
+        )
+        .join(movie_genres, movie_genres.c.genre_id == Genre.id, isouter=True)
+        .group_by(Genre.id)
+        .order_by(sa.desc("movie_count"))
+    )
+    result = await db.execute(stmt)
+    rows = result.all()
+    return [GenreCount(id=row.id, name=row.name, movie_count=row.movie_count) for row in rows]
 
 @router.get("/{movie_id}/", response_model=MovieRetrieve)
 async def get_movie(movie_id: int, db: AsyncSession = Depends(get_db)) -> MovieRetrieve:
@@ -109,14 +125,24 @@ async def like_movie(
     if not movie:
         raise HTTPException(status_code=404, detail="Movie not found")
 
-    like = MovieLike(user_id=user.id, movie_id=movie_id, is_like=True)
+    existing = (
+        await db.scalars(
+            select(MovieLike).where(
+                MovieLike.user_id == user.id,
+                MovieLike.movie_id == movie_id
+            )
+        )
+    ).first()
 
-    try:
-        db.add(like)
-        await db.commit()
-    except IntegrityError:
-        raise HTTPException(status_code=400, detail="You already liked this movie")
+    if existing:
+        if existing.is_like:
+            return {"message": "You already liked this movie"}
+        else:
+            existing.is_like = True
+    else:
+        db.add(MovieLike(user_id=user.id, movie_id=movie_id, is_like=True))
 
+    await db.commit()
     return {"message": "Movie liked"}
 
 @router.post("/{movie_id}/dislike")
@@ -130,14 +156,24 @@ async def dislike_movie(
     if not movie:
         raise HTTPException(status_code=404, detail="Movie not found")
 
-    dislike = MovieLike(user_id=user.id, movie_id=movie_id, is_like=False)
+    existing = (
+        await db.scalars(
+            select(MovieLike).where(
+                MovieLike.user_id == user.id,
+                MovieLike.movie_id == movie_id
+            )
+        )
+    ).first()
 
-    try:
-        db.add(dislike)
-        await db.commit()
-    except IntegrityError:
-        raise HTTPException(status_code=400, detail="You already disliked this movie")
+    if existing:
+        if not existing.is_like:
+            return {"message": "You already disliked this movie"}
+        else:
+            existing.is_like = False
+    else:
+        db.add(MovieLike(user_id=user.id, movie_id=movie_id, is_like=False))
 
+    await db.commit()
     return {"message": "Movie disliked"}
 
 @router.post("/{movie_id}/comments", response_model=CommentRetrieve, status_code=201)
@@ -226,24 +262,6 @@ async def get_favorite_movies(
     result = await db.execute(stmt)
     return result.scalars().all()
 
-@router.get("/genres/", response_model=List[GenreCount])
-async def get_genres_with_counts(
-    db: AsyncSession = Depends(get_db),
-):
-    stmt = (
-        select(
-            Genre.id,
-            Genre.name,
-            sa.func.count(movie_genres.c.movie_id).label("movie_count")
-        )
-        .join(movie_genres, movie_genres.c.genre_id == Genre.id, isouter=True)
-        .group_by(Genre.id)
-        .order_by(sa.desc("movie_count"))
-    )
-    result = await db.execute(stmt)
-    rows = result.all()
-    return [GenreCount(id=row.id, name=row.name, movie_count=row.movie_count) for row in rows]
-
 @router.post("/{movie_id}/rate")
 async def rate_movie(
     movie_id: int,
@@ -260,13 +278,22 @@ async def rate_movie(
 
     stmt = select(Rating).where(Rating.user_id == user.id, Rating.movie_id == movie_id)
     result = await db.execute(stmt)
-    rating = result.scalars().first()
+    movie_rating = result.scalars().first()
 
-    if rating:
-        rating.rating = rating
+    if movie_rating:
+        movie_rating.rating = rating
     else:
-        rating = Rating(user_id=user.id, movie_id=movie_id, rating=rating)
-        db.add(rating)
+        movie.votes += 1
+        movie_rating = Rating(user_id=user.id, movie_id=movie_id, rating=rating)
+        db.add(movie_rating)
+
+    stmt = select(Rating.rating).where(Rating.movie_id == movie_id)
+    result = await db.execute(stmt)
+    ratings = result.scalars().all()
+
+    if ratings:
+        average_rating = sum(ratings) / len(ratings)
+        movie.imdb = round(average_rating, 2)
 
     await db.commit()
     return {"message": "Rating saved"}
