@@ -2,7 +2,7 @@ import datetime
 from typing import List
 from sqlalchemy import (
     Boolean, Column, DateTime, Integer, String, Text, ForeignKey,
-    Table, UniqueConstraint, DECIMAL, Enum
+    Table, UniqueConstraint, DECIMAL
 )
 from src.database.models.accounts import UserModel
 from src.database.models.base import Base
@@ -11,7 +11,6 @@ from sqlalchemy.orm import (
 )
 import uuid
 from uuid import UUID
-from enum import Enum as PyEnum
 
 movie_genres = Table(
     "movie_genres",
@@ -93,15 +92,19 @@ class Movie(Base):
     name: Mapped[str] = mapped_column(String(250), nullable=False)
     year: Mapped[int] = mapped_column(nullable=False)
     time: Mapped[int] = mapped_column(nullable=False)
-    imdb: Mapped[float] = mapped_column(nullable=False)
-    votes: Mapped[int] = mapped_column(nullable=False)
+    imdb: Mapped[float] = mapped_column(default=0, nullable=False)
+    votes: Mapped[int] = mapped_column(default=0, nullable=False)
     meta_score: Mapped[float | None] = mapped_column(nullable=True)
     gross: Mapped[float | None] = mapped_column(nullable=True)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     price: Mapped[float] = mapped_column(DECIMAL(10, 2), nullable=False)
     certification_id: Mapped[int] = mapped_column(ForeignKey("certifications.id"), nullable=False)
 
-    likes: Mapped[List["MovieLike"]] = relationship("MovieLike", back_populates="movie")
+    likes = relationship(
+        "MovieLike",
+        back_populates="movie",
+        cascade="all, delete-orphan",
+    )
     certification: Mapped["Certification"] = relationship(back_populates="movies")
 
     genres: Mapped[list["Genre"]] = relationship(
