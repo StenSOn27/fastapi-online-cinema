@@ -117,10 +117,12 @@ class Movie(Base):
         back_populates="movies"
     )
 
+
 class Favorite(Base):
     __tablename__ = "favorites"
     user_id = Column(ForeignKey("users.id"), primary_key=True)
     movie_id = Column(ForeignKey("movies.id"), primary_key=True)
+    created_at = Column(DateTime, default=datetime.datetime.now(datetime.timezone.utc))
 
 
 class MovieLike(Base):
