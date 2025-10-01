@@ -1,6 +1,9 @@
-from fastapi import Depends, HTTPException, status
+from typing import Callable, Iterable
+from fastapi import Depends, HTTPException
 from sqlalchemy import select
-from src.database.models.accounts import UserModel
+from sqlalchemy.orm import selectinload
+from src.exceptions.token import TokenExpiredError, InvalidTokenError
+from src.database.models.accounts import UserGroupEnum, UserModel
 from src.notifications.emails import EmailSender, EmailSenderInterface
 from src.config.settings import BaseAppSettings
 from src.security.token_manager import JWTTokenManager
@@ -47,18 +50,38 @@ async def get_current_user(
     db: AsyncSession = Depends(get_db),
     jwt_manager: JWTTokenManager = Depends(get_jwt_manager)
 ) -> UserRetrieveSchema:
-    payload = jwt_manager.decode_access_token(token)
-    if payload is None:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    user_id = payload.get("user_id")
-    if user_id is None:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    db_user = await db.execute(select(UserModel).where(UserModel.id == user_id))
-    if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
-    return UserRetrieveSchema.model_validate(db_user)
+    try:
+        payload = jwt_manager.decode_access_token(token)
+        if payload is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        user_id = payload.get("user_id")
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        result = await db.execute(
+            select(UserModel)
+            .options(selectinload(UserModel.group))
+            .where(UserModel.id == user_id)
+        )
+        user = result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+    except (TokenExpiredError, InvalidTokenError):
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+        
+    return UserRetrieveSchema(
+        id=user.id,
+        email=user.email,
+        is_active=user.is_active,
+        created_at=user.created_at,
+        updated_at=user.updated_at,
+        group=UserGroupEnum(user.group.name)
+    )
 
-async def require_admin(current_user: UserRetrieveSchema = Depends(get_current_user)):
-    if current_user.group_id != 3:
-        raise HTTPException(status_code=403, detail="Access forbidden: admins only")
-    return current_user
+def require_roles(roles: Iterable[str]) -> Callable:
+    roles_set = {role.upper() for role in roles}
+    async def checker(current_user: UserRetrieveSchema = Depends(get_current_user)):
+        user_role = str(current_user.group).upper()
+        if user_role not in roles_set:
+            raise HTTPException(status_code=403, detail="Access forbidden")
+        return current_user
+    return checker
