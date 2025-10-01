@@ -18,7 +18,7 @@ router = APIRouter(prefix="/movies")
 async def movies_list(
     db: AsyncSession = Depends(get_db),
     limit: int = Query(10, ge=1),
-    offset: int = Query(0, ge=0),
+    page: int = Query(1, ge=1),
     year: int | None = Query(None),
     min_rating: float | None = Query(None),
     max_rating: float | None = Query(None),
@@ -26,6 +26,7 @@ async def movies_list(
     sort_by: str = Query("release_date"),
     sort_order: str = Query("desc"),
 ):
+    offset = (page - 1) * limit
     stmt = select(Movie).distinct()
 
     if search:
@@ -56,7 +57,8 @@ async def movies_list(
     sort_column = sort_fields.get(sort_by, Movie.year)
     if sort_order == "desc":
         stmt = stmt.order_by(sort_column.desc())
-    stmt = stmt.order_by(sort_column.asc())
+    else:
+        stmt = stmt.order_by(sort_column.asc())
 
     stmt = stmt.limit(limit).offset(offset)
 
