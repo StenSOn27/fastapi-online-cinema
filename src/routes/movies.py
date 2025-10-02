@@ -3,12 +3,19 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 from src.database.models.accounts import UserModel
 from src.schemas.accounts import UserRetrieveSchema
-from src.schemas.movies import CommentCreate, CommentRetrieve, GenreCount, MovieListItem, MovieRetrieve
-from src.database.models.movies import Comment, Director, Favorite, Genre, Movie, MovieLike, Rating, Star, movie_genres
+from src.schemas.movies import (
+    CommentCreate, CommentRetrieve,
+    GenreCount, MovieListItem, MovieRetrieve
+)
+from src.database.models.movies import (
+    Comment, Director, Favorite,
+    Genre, Movie, MovieLike,
+    Rating, Star, movie_genres
+)
 from src.config.dependencies import get_db, get_current_user
-
 from sqlalchemy.orm import selectinload
 
 
@@ -66,9 +73,7 @@ async def movies_list(
     return result.scalars().all()
 
 @router.get("/genres/", response_model=List[GenreCount])
-async def get_genres_with_counts(
-    db: AsyncSession = Depends(get_db),
-):
+async def get_genres_with_counts(db: AsyncSession = Depends(get_db)):
     stmt = (
         select(
             Genre.id,
@@ -98,23 +103,7 @@ async def get_movie(movie_id: int, db: AsyncSession = Depends(get_db)) -> MovieR
     if movie is None:
         raise HTTPException(status_code=404, detail="Movie not found")
 
-    return MovieRetrieve(
-        id=movie.id,
-        uuid=movie.uuid,
-        name=movie.name,
-        year=movie.year,
-        time=movie.time,
-        imdb=movie.imdb,
-        votes=movie.votes,
-        meta_score=movie.meta_score,
-        gross=movie.gross,
-        description=movie.description,
-        price=movie.price,
-        certification=movie.certification.name,
-        genres=[g.name for g in movie.genres],
-        directors=[d.name for d in movie.directors],
-        stars=[s.name for s in movie.stars],
-    )
+    return MovieRetrieve.model_validate(movie)
 
 @router.post("/{movie_id}/like")
 async def like_movie(
@@ -122,7 +111,6 @@ async def like_movie(
     db: AsyncSession = Depends(get_db),
     user: UserRetrieveSchema = Depends(get_current_user)
 ) -> dict:
-
     movie = (await db.scalars(select(Movie).where(Movie.id == movie_id))).first()
     if not movie:
         raise HTTPException(status_code=404, detail="Movie not found")
@@ -144,7 +132,12 @@ async def like_movie(
     else:
         db.add(MovieLike(user_id=user.id, movie_id=movie_id, is_like=True))
 
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail="Already liked")
+
     return {"message": "Movie liked"}
 
 @router.post("/{movie_id}/dislike")
@@ -153,7 +146,6 @@ async def dislike_movie(
     db: AsyncSession = Depends(get_db),
     user: UserRetrieveSchema = Depends(get_current_user)
 ) -> dict:
-
     movie = (await db.scalars(select(Movie).where(Movie.id == movie_id))).first()
     if not movie:
         raise HTTPException(status_code=404, detail="Movie not found")
@@ -175,7 +167,12 @@ async def dislike_movie(
     else:
         db.add(MovieLike(user_id=user.id, movie_id=movie_id, is_like=False))
 
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail="Already disliked")
+
     return {"message": "Movie disliked"}
 
 @router.post("/{movie_id}/comments", response_model=CommentRetrieve, status_code=201)
@@ -185,7 +182,6 @@ async def create_comment(
     db: AsyncSession = Depends(get_db),
     user: UserRetrieveSchema = Depends(get_current_user)
 ):
-
     movie = await db.get(Movie, movie_id)
     if not movie:
         raise HTTPException(status_code=404, detail="Movie not found")
@@ -196,8 +192,14 @@ async def create_comment(
         text=comment_data.text
     )
     db.add(comment)
-    await db.commit()
-    await db.refresh(comment)
+
+    try:
+        await db.commit()
+        await db.refresh(comment)
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail="Error saving comment")
+
     return comment
 
 @router.get("/{movie_id}/comments", response_model=List[CommentRetrieve])
@@ -205,15 +207,12 @@ async def get_comments(
     movie_id: int,
     db: AsyncSession = Depends(get_db)
 ) -> List[CommentRetrieve]:
-
     result = await db.execute(
         select(Comment)
         .where(Comment.movie_id == movie_id)
         .order_by(Comment.created_at.desc())
     )
-
-    comments = result.scalars().all()
-    return comments
+    return result.scalars().all()
 
 @router.post("/favorites/{movie_id}", status_code=201)
 async def add_to_favorites(
@@ -232,7 +231,12 @@ async def add_to_favorites(
         raise HTTPException(status_code=400, detail="Already in favorites")
 
     db.add(Favorite(user_id=user.id, movie_id=movie_id))
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail="Already in favorites")
+
     return {"message": "Movie added to favorites"}
 
 @router.delete("/favorites/{movie_id}", status_code=204)
@@ -248,7 +252,11 @@ async def remove_from_favorites(
         raise HTTPException(status_code=404, detail="Favorite not found")
 
     await db.delete(favorite)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail="Could not remove favorite")
 
 @router.get("/favorites", response_model=List[MovieListItem])
 async def get_favorite_movies(
@@ -297,5 +305,10 @@ async def rate_movie(
         average_rating = sum(ratings) / len(ratings)
         movie.imdb = round(average_rating, 2)
 
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail="Error saving rating")
+
     return {"message": "Rating saved"}
