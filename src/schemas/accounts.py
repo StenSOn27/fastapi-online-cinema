@@ -1,5 +1,6 @@
+from datetime import datetime
 from typing import Annotated
-from pydantic import BaseModel, EmailStr, StringConstraints, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, StringConstraints, field_validator
 from src.database.validators import validate_password_strength, validate_email_address
 
 
@@ -58,3 +59,14 @@ class UserLoginResponseSchema(BaseModel):
 
 class TokenRefreshResponseSchema(BaseModel):
     access_token: str
+
+
+class UserRetrieveSchema(BaseModel):
+    id: int
+    email: str
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+    group: str
+
+    model_config = ConfigDict(from_attributes=True)

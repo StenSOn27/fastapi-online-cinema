@@ -68,7 +68,8 @@ class UserModel(Base):
         back_populates="user",
         cascade="all, delete-orphan"
     )
-    
+    likes: Mapped[List["MovieLike"]] = relationship("MovieLike", back_populates="user")
+
     def __repr__(self):
         return f"<UserModel(id={self.id}, email={self.email}, is_active={self.is_active})>"
     
