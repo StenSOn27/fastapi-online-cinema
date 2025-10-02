@@ -6,6 +6,7 @@ from sqlalchemy import Boolean, Date, DateTime, Enum, Integer, String, ForeignKe
 from src.database.models.base import Base
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column, relationship
+from src.utils import hash_password
 
 
 class UserGroupEnum(str, enum.Enum):
@@ -69,6 +70,8 @@ class UserModel(Base):
         cascade="all, delete-orphan"
     )
     likes: Mapped[List["MovieLike"]] = relationship("MovieLike", back_populates="user")
+    cart: Mapped["Cart"] = relationship(back_populates="user", uselist=False)
+    purchased_movies: Mapped[List["PurchasedMovie"]] = relationship(back_populates="user")
 
     def __repr__(self):
         return f"<UserModel(id={self.id}, email={self.email}, is_active={self.is_active})>"
@@ -79,7 +82,7 @@ class UserModel(Base):
 
     @password.setter
     def password(self, raw_password: str) -> None:
-        self._hashed_password = hash(raw_password)  # type: ignore
+        self._hashed_password = hash_password(raw_password)  # type: ignore
 
 class UserProfileModel(Base):
     __tablename__ = "user_profiles"
