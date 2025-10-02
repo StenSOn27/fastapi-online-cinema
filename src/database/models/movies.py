@@ -1,8 +1,8 @@
 import datetime
-from typing import List
+from typing import List, Optional
 from sqlalchemy import (
     Boolean, Column, DateTime, Integer, String, Text, ForeignKey,
-    Table, UniqueConstraint, DECIMAL
+    Table, UniqueConstraint, DECIMAL, func
 )
 from src.database.models.accounts import UserModel
 from src.database.models.base import Base
@@ -167,3 +167,17 @@ class Notification(Base):
     message = Column(Text)
     is_read = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.datetime.now(datetime.timezone.utc))
+
+
+class PurchasedMovie(Base):
+    __tablename__ = "purchased_movies"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    movie_id: Mapped[int] = mapped_column(ForeignKey("movies.id"), nullable=False)
+    purchased_at: Mapped[Optional[DateTime]] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    user: Mapped["UserModel"] = relationship("UserModel", back_populates="purchased_movies")
+    movie: Mapped["Movie"] = relationship("Movie")
