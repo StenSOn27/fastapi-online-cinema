@@ -67,6 +67,6 @@ class UserRetrieveSchema(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
-    group_id: int
+    group: str
 
     model_config = ConfigDict(from_attributes=True)
