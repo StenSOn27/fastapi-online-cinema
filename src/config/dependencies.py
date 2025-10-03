@@ -60,6 +60,7 @@ async def get_current_user(
         result = await db.execute(
             select(UserModel)
             .options(selectinload(UserModel.group))
+            .options(selectinload(UserModel.region))
             .where(UserModel.id == user_id)
         )
         user = result.scalar_one_or_none()
@@ -74,7 +75,8 @@ async def get_current_user(
         is_active=user.is_active,
         created_at=user.created_at,
         updated_at=user.updated_at,
-        group=UserGroupEnum(user.group.name)
+        group=UserGroupEnum(user.group.name),
+        region=user.region
     )
 
 def require_roles(roles: Iterable[str]) -> Callable:
