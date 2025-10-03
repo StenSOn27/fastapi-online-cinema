@@ -79,6 +79,7 @@ class UserModel(Base):
     likes: Mapped[List["MovieLike"]] = relationship("MovieLike", back_populates="user")
     cart: Mapped["Cart"] = relationship(back_populates="user", uselist=False)
     purchased_movies: Mapped[List["PurchasedMovie"]] = relationship(back_populates="user")
+    orders: Mapped[List["Order"]] = relationship("Order", back_populates="user")
 
     def __repr__(self):
         return f"<UserModel(id={self.id}, email={self.email}, is_active={self.is_active})>"
