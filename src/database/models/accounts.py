@@ -2,12 +2,16 @@
 import enum
 from src.utils import generate_secure_token
 from typing import List, Optional
-from sqlalchemy import Boolean, Date, DateTime, Enum, Integer, String, ForeignKey, Text, UniqueConstraint, func
+from sqlalchemy import (
+    Boolean, Date, DateTime,
+    Enum, Integer, String,
+    ForeignKey, Text, UniqueConstraint, func
+)
 from src.database.models.base import Base
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column, relationship
 from src.utils import hash_password
-
+from src.database.models.orders import Order
 
 class UserGroupEnum(str, enum.Enum):
     USER = "user"
@@ -48,6 +52,9 @@ class UserModel(Base):
     group_id: Mapped[int] = mapped_column(ForeignKey("user_groups.id", ondelete="CASCADE"), nullable=False)
     group: Mapped["UserGroupModel"] = relationship("UserGroupModel", back_populates="users")
 
+    region_id: Mapped[int] = mapped_column(ForeignKey("regions.id"))
+    region: Mapped["Region"] = relationship("Region", backref="users")
+
     activation_token: Mapped[Optional["ActivationTokenModel"]] = relationship(
         "ActivationTokenModel",
         back_populates="user",
@@ -75,7 +82,7 @@ class UserModel(Base):
 
     def __repr__(self):
         return f"<UserModel(id={self.id}, email={self.email}, is_active={self.is_active})>"
-    
+
     @property
     def password(self) -> None:
         raise AttributeError("Password is write-only. Use the setter to set the password.")

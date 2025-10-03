@@ -1,6 +1,8 @@
 from datetime import datetime
 from typing import Annotated
 from pydantic import BaseModel, ConfigDict, EmailStr, StringConstraints, field_validator
+from src.schemas.regions import RegionSchema
+from src.database.models.regions import Region
 from src.database.validators import validate_password_strength, validate_email_address
 
 
@@ -24,7 +26,7 @@ class BaseEmailPasswordSchema(BaseModel):
 
 
 class UserRegisterRequestSchema(BaseEmailPasswordSchema):
-    pass
+    region_code: str
 
 
 class UserResetPasswordSchema(BaseModel):
@@ -68,5 +70,6 @@ class UserRetrieveSchema(BaseModel):
     created_at: datetime
     updated_at: datetime
     group: str
+    region: RegionSchema
 
     model_config = ConfigDict(from_attributes=True)
