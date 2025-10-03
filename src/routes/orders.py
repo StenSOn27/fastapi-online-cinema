@@ -1,7 +1,9 @@
+from typing import List
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import APIRouter, Depends, HTTPException
 
+from src.schemas.orders import OrderSchema
 from src.config.dependencies import get_current_user
 from src.schemas.accounts import UserRetrieveSchema
 from src.database.session_sqlite import get_db
@@ -9,7 +11,7 @@ from src.crud import split_available_movies
 from src.database.models.movies import Movie
 from src.database.models.shopping_cart import Cart, CartItem
 from src.database.models.orders import Order, OrderItem
-
+from sqlalchemy.orm import selectinload
 
 router = APIRouter(prefix="/orders")
 
@@ -64,3 +66,23 @@ async def create_order_from_cart(
             "All movies included."
         )
     }
+
+
+@router.get("/", response_model=List[OrderSchema])
+async def get_orders_list(
+    db: AsyncSession = Depends(get_db),
+    current_user: UserRetrieveSchema = Depends(get_current_user),
+) -> List[OrderSchema]:
+
+    stmt = (
+        sa.select(Order)
+        .options(selectinload(Order.items))
+        .where(Order.user_id == current_user.id)
+    )
+    result = await db.execute(stmt)
+    orders = result.scalars().all()
+
+    if not orders:
+        raise HTTPException(status_code=404, detail="You have no orders")
+    
+    return orders
