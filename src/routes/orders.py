@@ -24,6 +24,7 @@ async def create_order_from_cart(
 ):
     cart_movie_ids = (await db.execute(
         sa.select(CartItem.movie_id)
+        .distinct()
         .join(Cart, CartItem.cart_id == Cart.id)
         .where(Cart.user_id == current_user.id)
     )).scalars().all()
@@ -31,14 +32,38 @@ async def create_order_from_cart(
     if not cart_movie_ids:
         raise HTTPException(status_code=400, detail="Cart is empty")
 
-    available_ids, unavailable_ids = await split_available_movies(db, cart_movie_ids, current_user.region.code)
+    purchased_ids = (await db.execute(
+        sa.select(OrderItem.movie_id)
+        .join(Order, OrderItem.order_id == Order.id)
+        .where(Order.user_id == current_user.id)
+        .where(Order.status == OrderStatus.PAID)
+    )).scalars().all()
+
+    movie_ids_to_check = list(set(cart_movie_ids) - set(purchased_ids))
+
+    if not movie_ids_to_check:
+        raise HTTPException(status_code=400, detail="All movies in cart already purchased")
+
+    available_ids, unavailable_ids = await split_available_movies(db, movie_ids_to_check, current_user.region.code)
 
     if not available_ids:
         return {
             "order_created": False,
             "unavailable_movie_ids": unavailable_ids,
-            "message": "All movies are unavailable and were excluded from order."
+            "message": "All movies are unavailable or already purchased"
         }
+
+    pending_ids = (await db.execute(
+        sa.select(OrderItem.movie_id)
+        .join(Order, OrderItem.order_id == Order.id)
+        .where(Order.user_id == current_user.id)
+        .where(Order.status == OrderStatus.PENDING)
+    )).scalars().all()
+
+    final_movie_ids = list(set(available_ids) - set(pending_ids))
+
+    if not final_movie_ids:
+        raise HTTPException(status_code=400, detail="All movies already included in a pending order")
 
     order = Order(user_id=current_user.id)
     db.add(order)
@@ -46,7 +71,7 @@ async def create_order_from_cart(
 
     movies = (await db.execute(
         sa.select(Movie.id, Movie.price)
-        .where(Movie.id.in_(available_ids))
+        .where(Movie.id.in_(final_movie_ids))
     )).all()
 
     total = 0
@@ -61,10 +86,10 @@ async def create_order_from_cart(
         "order_created": True,
         "order_id": order.id,
         "total_amount": str(total),
-        "excluded_movie_ids": unavailable_ids,
+        "excluded_movie_ids": list(set(cart_movie_ids) - set(final_movie_ids)),
         "message": (
-            "Some movies were excluded due to unavailability."
-            if unavailable_ids else
+            "Some movies were excluded (unavailable, already purchased or already in a pending order)."
+            if len(final_movie_ids) < len(cart_movie_ids) else
             "All movies included."
         )
     }
