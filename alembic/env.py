@@ -14,6 +14,9 @@ from src.database.models.base import Base
 from src.database.models.accounts import *
 from src.database.models.movies import *
 from src.database.models.shopping_cart import *
+from src.database.models.regions import *
+from src.database.models.orders import *
+from src.database.models.payment import *
 
 print("🧪 Alembic sees tables:", Base.metadata.tables.keys())
 # Alembic Config object

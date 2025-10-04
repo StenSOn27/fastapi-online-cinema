@@ -4,6 +4,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from src.database.models.regions import Region
 from src.database.validators import validate_password_strength
 from src.security.token_manager import JWTTokenManager
 from src.crud import get_user_by_email
@@ -43,13 +44,18 @@ async def register_user(
     stmt = select(UserGroupModel).filter_by(name=UserGroupEnum.USER)
     result = await db.execute(stmt)
     user_group = result.scalars().first()
-    print(user_group)
+
     if not user_group:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Default user group not found."
         )
+    stmt = select(Region).filter_by(code=user_data.region_code.upper())
+    region_result = await db.execute(stmt)
+    region = region_result.scalars().first()
 
+    if not region:
+        raise HTTPException(status_code=400, detail="Invalid region code.")
     hashed_password = hash_password(user_data.password)
 
     try:
@@ -57,7 +63,8 @@ async def register_user(
             email=user_data.email,
             _hashed_password=hashed_password,
             is_active=False,
-            group=user_group
+            group=user_group,
+            region_id=region.id
         )
         db.add(new_user)
         await db.flush()

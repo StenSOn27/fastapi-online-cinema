@@ -22,7 +22,8 @@ async def create_movie(
         raise HTTPException(status_code=400, detail="Duplicate star IDs in request")
     if len(movie_data.director_ids) != len(set(movie_data.director_ids)):
         raise HTTPException(status_code=400, detail="Duplicate director IDs in request")
-
+    if not movie_data.certification_id:
+        raise HTTPException(status_code=400, detail="Certification id must be provided")
     genres = await get_genres_by_ids(db, movie_data.genre_ids)
     stars = await get_stars_by_ids(db, movie_data.star_ids)
     directors = await get_directors_by_ids(db, movie_data.director_ids)

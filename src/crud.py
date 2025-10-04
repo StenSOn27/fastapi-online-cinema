@@ -1,11 +1,11 @@
 import datetime
-from typing import List
+import sqlalchemy as sa
+from typing import List, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from src.database.models.accounts import ActivationTokenModel, UserModel
 from src.database.models.movies import Genre, Star, Director
-
-
+from src.database.models.regions import MovieRegion, Region
 async def get_user_by_email(db: AsyncSession, email: str) -> UserModel | None:
     """Retrieve a user by their email address."""
 
@@ -34,3 +34,23 @@ async def get_stars_by_ids(db: AsyncSession, ids: list[int]) -> list[Star]:
 async def get_directors_by_ids(db: AsyncSession, ids: list[int]) -> list[Director]:
     result = await db.execute(select(Director).where(Director.id.in_(ids)))
     return result.scalars().all()
+
+
+async def split_available_movies(
+    db: AsyncSession,
+    movie_ids: List[int],
+    user_region: str
+) -> Tuple[List[int], List[int]]:
+    result = await db.execute(
+        sa.select(MovieRegion.movie_id)
+        .join(Region, MovieRegion.region_id == Region.id)
+        .where(
+            MovieRegion.movie_id.in_(movie_ids),
+            Region.code == user_region
+        )
+    )
+    available_ids = {row[0] for row in result.all()}
+
+    unavailable_ids = set(movie_ids) - available_ids
+
+    return list(available_ids), list(unavailable_ids)
