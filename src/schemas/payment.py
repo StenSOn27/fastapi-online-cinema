@@ -42,3 +42,7 @@ class PaymentHistoryResponse(BaseModel):
     payments: List[PaymentHistoryItem]
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PaymentAdminResponse(BaseModel):
+    payments: List[PaymentResponseSchema]
