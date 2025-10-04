@@ -4,7 +4,7 @@ from fastapi import Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 import stripe
-from src.database.models.orders import Order, OrderItem
+from src.database.models.orders import Order, OrderItem, OrderStatus
 from src.exceptions.token import TokenExpiredError, InvalidTokenError
 from src.database.models.accounts import UserGroupEnum, UserModel
 from src.notifications.emails import EmailSender, EmailSenderInterface
@@ -108,7 +108,11 @@ async def get_checkout_session(
 
     if not order or order.user_id != user.id:
         raise HTTPException(status_code=404, detail="Order not found or access denied")
-    
+    if order.status == OrderStatus.CANCELED:
+        raise HTTPException(status_code=400, detail="Order is canceled")
+    if order.status == OrderStatus.PAID:
+        raise HTTPException(status_code=400, detail="Order is already paid")
+
     try:
         stripe.api_key = settings.STRIPE_API_KEY
         list_items = []
