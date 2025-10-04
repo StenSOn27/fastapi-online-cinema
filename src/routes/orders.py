@@ -10,8 +10,10 @@ from src.database.session_sqlite import get_db
 from src.crud import split_available_movies
 from src.database.models.movies import Movie
 from src.database.models.shopping_cart import Cart, CartItem
-from src.database.models.orders import Order, OrderItem
+from src.database.models.orders import Order, OrderItem, OrderStatus
 from sqlalchemy.orm import selectinload
+from sqlalchemy.exc import IntegrityError
+
 
 router = APIRouter(prefix="/orders")
 
@@ -86,3 +88,34 @@ async def get_orders_list(
         raise HTTPException(status_code=404, detail="You have no orders")
     
     return orders
+
+@router.patch("/cancel/")
+async def cancel_order_before_payment(
+    order_id: int,
+    current_user: UserRetrieveSchema = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        stmt = (
+            sa.select(Order)
+            .where(Order.user_id == current_user.id)
+            .where(Order.id == order_id)
+        )
+        result = await db.execute(stmt)
+        order = result.scalars().first()
+
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+        
+        if order.status == OrderStatus.PAID:
+            raise HTTPException(status_code=400, detail="Cannot cancel a paid order")
+        if order.status == OrderStatus.CANCELED:
+            raise HTTPException(status_code=400, detail="Order already canceled")
+        
+        order.status = OrderStatus.CANCELED
+        await db.commit()
+
+    except IntegrityError:
+        raise HTTPException(status_code=500, detail="Error during canceling order, try again")
+
+    return {"message": "Order canceled successfully"}
