@@ -10,7 +10,6 @@ from src.database.models.base import Base
 
 class PaymentStatus(str, enum.Enum):
     SUCCESSFUL = "successful"
-    CANCELED = "canceled"
     REFUNDED = "refunded"
 
 
