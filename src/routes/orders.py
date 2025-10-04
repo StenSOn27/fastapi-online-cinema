@@ -3,8 +3,9 @@ import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import APIRouter, Depends, HTTPException
 
+from src.config.settings import BaseAppSettings
 from src.schemas.orders import OrderSchema
-from src.config.dependencies import get_current_user
+from src.config.dependencies import get_checkout_session, get_current_user, get_settings
 from src.schemas.accounts import UserRetrieveSchema
 from src.database.session_sqlite import get_db
 from src.crud import split_available_movies
@@ -144,3 +145,20 @@ async def cancel_order_before_payment(
         raise HTTPException(status_code=500, detail="Error during canceling order, try again")
 
     return {"message": "Order canceled successfully"}
+
+
+@router.post("/confirm/")
+async def confirm_order(
+    order_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: UserRetrieveSchema = Depends(get_current_user),
+    settings: BaseAppSettings = Depends(get_settings)
+) -> dict:
+    
+    session = await get_checkout_session(
+        order_id=order_id,
+        db=db,
+        user=user,
+        settings=settings
+    )
+    return session
