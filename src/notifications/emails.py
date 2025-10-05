@@ -24,6 +24,7 @@ class EmailSender(EmailSenderInterface):
         password_reset_email_request_template_name: str,
         password_reset_email_complete_template_name: str,
         password_change_email_complete_template_name: str,
+        successfull_payment_email_template_name: str
     ):
         self._hostname = hostname
         self._port = port
@@ -35,7 +36,8 @@ class EmailSender(EmailSenderInterface):
         self._password_reset_email_request_template_name = password_reset_email_request_template_name
         self._password_reset_email_complete_template_name = password_reset_email_complete_template_name
         self._password_change_email_complete_template_name = password_change_email_complete_template_name
-    
+        self._successfull_payment_email_template_name = successfull_payment_email_template_name
+
         self._env = Environment(loader=FileSystemLoader(template_dir))
 
     async def _send_email(self, recipient: str, subject: str, html_content: str) -> None:
@@ -85,4 +87,10 @@ class EmailSender(EmailSenderInterface):
         template = self._env.get_template(self._password_change_email_complete_template_name)
         html_content = template.render(email=email, login_link=login_link)
         subject = "Password Change"
+        await self._send_email(email, subject, html_content)
+
+    async def send_successfull_payment_email(self, email: str, order_id: int) -> None:
+        template = self._env.get_template(self._successfull_payment_email_template_name)
+        html_content = template.render(email=email, order_id=order_id)
+        subject = "Payment Successful"
         await self._send_email(email, subject, html_content)

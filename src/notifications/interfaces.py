@@ -36,3 +36,7 @@ class EmailSenderInterface(ABC):
     @abstractmethod
     async def send_password_change_complete_email(self, email, login_link: str) -> None:
         pass
+    
+    @abstractmethod
+    async def send_successfull_payment_email(self, email, order_id: int) -> None:
+        pass

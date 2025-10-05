@@ -1,13 +1,14 @@
 from decimal import Decimal
 import stripe
+from src.notifications.interfaces import EmailSenderInterface
 from src.config.settings import BaseAppSettings
 from src.database.models.orders import Order, OrderStatus
 from src.schemas.payment import PaymentHistoryItem, PaymentHistoryResponse, PaymentResponseSchema, PaymentStatusEnum
-from src.config.dependencies import get_current_user, get_settings
+from src.config.dependencies import get_accounts_email_notificator, get_current_user, get_settings
 from src.database.session_sqlite import get_db
 from src.schemas.accounts import UserRetrieveSchema
-from src.database.models.payment import Payment, PaymentItem, PaymentStatus
-from fastapi import APIRouter, Depends, HTTPException, Query
+from src.database.models.payment import Payment, PaymentItem
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -16,9 +17,11 @@ router = APIRouter(prefix="/payment")
 
 @router.post("/success/", response_model=PaymentResponseSchema)
 async def success_payment(
+    background_tasks: BackgroundTasks,
     session_id: str = Query(...),
     db: AsyncSession = Depends(get_db),
     user: UserRetrieveSchema = Depends(get_current_user),
+    email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
     settings: BaseAppSettings = Depends(get_settings)
 ) -> PaymentResponseSchema:
     try:
@@ -82,6 +85,11 @@ async def success_payment(
         result = await db.execute(stmt)
         payment_with_items = result.scalars().first()
 
+        background_tasks.add_task(
+            email_sender.send_successfull_payment_email,
+            str(user.email),
+            order.id
+        )
         return PaymentResponseSchema.model_validate(payment_with_items)
 
     except Exception as e:

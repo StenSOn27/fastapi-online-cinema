@@ -35,6 +35,7 @@ def get_accounts_email_notificator(
         password_reset_email_request_template_name=settings.PASSWORD_RESET_TEMLATE_NAME,
         password_reset_email_complete_template_name=settings.PASSWORD_RESET_COMPLETE_TEMLATE_NAME,
         password_change_email_complete_template_name=settings.PASSWORD_CHANGE_COMPLETE_TEMLATE_NAME,
+        successfull_payment_email_template_name=settings.SUCCESSFULL_PAYMENT_EMAIL_TEMPLATE_NAME
     )
 
 def get_jwt_manager(
