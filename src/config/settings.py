@@ -1,9 +1,12 @@
 import os
 from pathlib import Path
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class BaseAppSettings(BaseSettings):
+
+    model_config = SettingsConfigDict(env_file=".env")
+
     BASE_DIR: Path = Path(__file__).parent.parent
 
     PATH_TO_EMAIL_TEMPLATES_DIR: str = str(BASE_DIR / "notifications" / "templates")
@@ -23,3 +26,5 @@ class BaseAppSettings(BaseSettings):
     SECRET_KEY_ACCESS: str = os.getenv("SECRET_KEY_ACCESS", str(os.urandom(32)))
     SECRET_KEY_REFRESH: str = os.getenv("SECRET_KEY_REFRESH", str(os.urandom(32)))
     JWT_SIGNING_ALGORITHM: str = os.getenv("JWT_SIGNING_ALGORITHM", "HS256")
+
+    STRIPE_API_KEY: str

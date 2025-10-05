@@ -6,6 +6,7 @@ from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.sql import func
 import enum
 from src.database.models.base import Base
+from src.database.models.payment import PaymentItem
 
 class OrderStatus(str, enum.Enum):
     PENDING = "pending"
@@ -22,6 +23,7 @@ class OrderItem(Base):
 
     order: Mapped["Order"] = relationship(back_populates="items")
     movie: Mapped["Movie"] = relationship()
+    payment_items = relationship(PaymentItem, back_populates="order_item", cascade="all, delete-orphan")
 
 class Order(Base):
     __tablename__ = "orders"
@@ -36,3 +38,4 @@ class Order(Base):
 
     items: Mapped[List["OrderItem"]] = relationship(back_populates="order", cascade="all, delete-orphan")
     user: Mapped["UserModel"] = relationship(back_populates="orders")
+    payments = relationship("Payment", back_populates="order", cascade="all, delete-orphan")

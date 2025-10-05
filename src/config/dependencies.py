@@ -1,7 +1,10 @@
+from decimal import Decimal
 from typing import Callable, Iterable
 from fastapi import Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
+import stripe
+from src.database.models.orders import Order, OrderItem, OrderStatus
 from src.exceptions.token import TokenExpiredError, InvalidTokenError
 from src.database.models.accounts import UserGroupEnum, UserModel
 from src.notifications.emails import EmailSender, EmailSenderInterface
@@ -87,3 +90,57 @@ def require_roles(roles: Iterable[str]) -> Callable:
             raise HTTPException(status_code=403, detail="Access forbidden")
         return current_user
     return checker
+
+
+async def get_checkout_session(
+    order_id: int,
+    db: AsyncSession,
+    user: UserRetrieveSchema,
+    settings: BaseAppSettings
+):
+    stmt = select(Order).options(
+        selectinload(Order.items).selectinload(OrderItem.movie),
+        selectinload(Order.user),
+    ).where(Order.id == order_id)
+
+    result = await db.execute(stmt)
+    order = result.scalars().first()
+
+    if not order or order.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Order not found or access denied")
+    if order.status == OrderStatus.CANCELED:
+        raise HTTPException(status_code=400, detail="Order is canceled")
+    if order.status == OrderStatus.PAID:
+        raise HTTPException(status_code=400, detail="Order is already paid")
+
+    try:
+        stripe.api_key = settings.STRIPE_API_KEY
+        list_items = []
+
+        for item in order.items:    
+            list_items.append({
+                "price_data": {
+                    "currency": "usd",
+                    "product_data": {
+                        "name": item.movie.name
+                    },
+                    "unit_amount": int(item.price_at_order * 100),
+                },
+                "quantity": 1
+            })
+
+        session = stripe.checkout.Session.create(
+            success_url="http://127.0.0.1:8000/api/v1/payment/success?session_id={CHECKOUT_SESSION_ID}",
+            cancel_url=f"http://127.0.0.1:8000/api/v1/orders/cancel?order_id={order.id}",
+            line_items=list_items,
+            mode="payment",
+            metadata={
+                "order_id": str(order.id),
+                "user_id": str(user.id)
+            },
+        )
+
+        return {"checkout_url": session.url}
+
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=400, detail=f"Stripe error: {e.user_message}")
