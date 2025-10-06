@@ -121,3 +121,11 @@ class MovieRetrieve(BaseModel):
     regions: List[RegionSchema]
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class MovieOut(BaseModel):
+    id: int
+    name: str
+    description: str
+
+    model_config = ConfigDict(from_attributes=True)
