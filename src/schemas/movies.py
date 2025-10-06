@@ -1,7 +1,8 @@
 import datetime
 from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, UUID4 as UUID, Field
-from decimal import Decimal
+
+from src.schemas.regions import RegionSchema
 
 
 class MovieListItem(BaseModel):
@@ -76,9 +77,10 @@ class MovieCreate(BaseModel):
     description: str
     price: float
     certification_id: int
-    genre_ids: List[int] = []
-    star_ids: List[int] = []
-    director_ids: List[int] = []
+    genre_ids: List[int]
+    star_ids: List[int]
+    director_ids: List[int]
+    regions_ids: List[int]
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -93,9 +95,10 @@ class MovieUpdate(BaseModel):
     description: str
     price: float
     certification_id: int
-    genre_ids: List[int] = []
-    star_ids: List[int] = []
-    director_ids: List[int] = []
+    genre_ids: List[int]
+    star_ids: List[int]
+    director_ids: List[int]
+    regions_ids: List[int]
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -115,5 +118,6 @@ class MovieRetrieve(BaseModel):
     genres: List[GenreSchema]
     stars: List[StarSchema]
     directors: List[DirectorSchema]
+    regions: List[RegionSchema]
 
     model_config = ConfigDict(from_attributes=True)

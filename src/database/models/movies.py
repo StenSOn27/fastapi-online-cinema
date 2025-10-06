@@ -119,7 +119,10 @@ class Movie(Base):
         secondary=movie_directors,
         back_populates="movies"
     )
-
+    regions: Mapped[List["Region"]] = relationship(
+        secondary="movie_regions",
+        back_populates="movies"
+    )
 
 class Favorite(Base):
     __tablename__ = "favorites"
