@@ -1,3 +1,4 @@
+from typing import List
 from sqlalchemy import ForeignKey, Integer, String, Column
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.database.models.base import Base
@@ -9,6 +10,11 @@ class Region(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     code: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False)
+
+    movies: Mapped[List["Movie"]] = relationship(
+        secondary="movie_regions",
+        back_populates="regions"
+    )
 
     def __repr__(self):
         return f"<Region(id={self.id}, code={self.code}, name={self.name})>"
