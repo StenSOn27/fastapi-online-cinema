@@ -70,11 +70,13 @@ class UserModel(Base):
         back_populates="user",
         cascade="all, delete-orphan"
     )
-    
     profile: Mapped[Optional["UserProfileModel"]] = relationship(
         "UserProfileModel",
         back_populates="user",
         cascade="all, delete-orphan"
+    )
+    purchased_movies: Mapped[List["PurchasedMovie"]] = relationship(
+        "PurchasedMovie", back_populates="user"
     )
     likes: Mapped[List["MovieLike"]] = relationship("MovieLike", back_populates="user")
     cart: Mapped["Cart"] = relationship(back_populates="user", uselist=False)
@@ -92,6 +94,11 @@ class UserModel(Base):
     @password.setter
     def password(self, raw_password: str) -> None:
         self._hashed_password = hash_password(raw_password)  # type: ignore
+
+    @property
+    def purchased_movie_list(self) -> List["Movie"]:
+        return [purchase.movie for purchase in self.purchased_movies]
+
 
 class UserProfileModel(Base):
     __tablename__ = "user_profiles"
