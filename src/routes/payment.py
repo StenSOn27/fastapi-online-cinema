@@ -1,5 +1,6 @@
 from decimal import Decimal
 import stripe
+from src.database.models.movies import PurchasedMovie
 from src.notifications.interfaces import EmailSenderInterface
 from src.config.settings import BaseAppSettings
 from src.database.models.orders import Order, OrderStatus
@@ -72,6 +73,12 @@ async def success_payment(
                 price_at_payment=Decimal(order_item.price_at_order)
             )
             db.add(payment_item)
+
+            purchased_movie = PurchasedMovie(
+                user_id=user.id,
+                movie_id=order_item.movie_id
+            )
+            db.add(purchased_movie)
 
         order.status = OrderStatus.PAID
         await db.commit()

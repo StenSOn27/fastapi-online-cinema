@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from src.database.validators import validate_movie_attributes
 from src.schemas.movies import MovieCreate, MovieRetrieve, MovieUpdate
-from src.database.models.movies import Movie
+from src.database.models.movies import Movie, PurchasedMovie
 from src.config.dependencies import get_db, require_roles
 from sqlalchemy.orm import selectinload
 
@@ -109,6 +109,16 @@ async def delete_movie(
     movie = await db.get(Movie, movie_id)
     if not movie:
         raise HTTPException(status_code=404, detail="Movie not found")
+
+    stmt = select(PurchasedMovie).where(PurchasedMovie.movie_id == movie_id).limit(1)
+    result = await db.execute(stmt)
+    purchased = result.scalar_one_or_none()
+
+    if purchased:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete movie that has been purchased by users"
+        )
 
     await db.delete(movie)
     try:
