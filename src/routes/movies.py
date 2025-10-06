@@ -95,6 +95,7 @@ async def get_movie(movie_id: int, db: AsyncSession = Depends(get_db)) -> MovieR
         selectinload(Movie.genres),
         selectinload(Movie.directors),
         selectinload(Movie.stars),
+        selectinload(Movie.regions)
     ).where(Movie.id == movie_id)
 
     result = await db.execute(stmt)
