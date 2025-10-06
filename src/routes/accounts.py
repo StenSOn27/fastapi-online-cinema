@@ -1,16 +1,20 @@
 import datetime
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from src.database.models.movies import PurchasedMovie
+from src.schemas.movies import MovieOut
+from src.database.models.regions import Region
 from src.database.validators import validate_password_strength
 from src.security.token_manager import JWTTokenManager
 from src.crud import get_user_by_email
 from src.schemas.accounts import (
     ChangePasswordSchema, PasswordResetCompleteRequestSchema,
     TokenRefreshRequestSchema, TokenRefreshResponseSchema, UserLoginResponseSchema,
-    UserLoginSchema, UserRegisterRequestSchema, UserResetPasswordSchema
+    UserLoginSchema, UserRegisterRequestSchema, UserResetPasswordSchema, UserRetrieveSchema
 )
 from src.database.models.accounts import (
     ActivationTokenModel, UserGroupEnum,
@@ -19,7 +23,7 @@ from src.database.models.accounts import (
 from src.database.session_sqlite import get_db
 from sqlalchemy import cast, delete, select
 from src.utils import hash_password, verify_password
-from src.config.dependencies import get_accounts_email_notificator, get_jwt_manager
+from src.config.dependencies import get_accounts_email_notificator, get_current_user, get_jwt_manager
 from src.notifications.emails import EmailSenderInterface
 
 router = APIRouter(prefix="/accounts")
@@ -43,13 +47,18 @@ async def register_user(
     stmt = select(UserGroupModel).filter_by(name=UserGroupEnum.USER)
     result = await db.execute(stmt)
     user_group = result.scalars().first()
-    print(user_group)
+
     if not user_group:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Default user group not found."
         )
+    stmt = select(Region).filter_by(code=user_data.region_code.upper())
+    region_result = await db.execute(stmt)
+    region = region_result.scalars().first()
 
+    if not region:
+        raise HTTPException(status_code=400, detail="Invalid region code.")
     hashed_password = hash_password(user_data.password)
 
     try:
@@ -57,7 +66,8 @@ async def register_user(
             email=user_data.email,
             _hashed_password=hashed_password,
             is_active=False,
-            group=user_group
+            group=user_group,
+            region_id=region.id
         )
         db.add(new_user)
         await db.flush()
@@ -369,3 +379,29 @@ async def refresh_access_token(
     new_access_token = jwt_manager.create_access_token({"user_id": user_id})
 
     return TokenRefreshResponseSchema(access_token=new_access_token)
+
+
+@router.get("/me/", response_model=UserRetrieveSchema)
+async def get_my_purchased_movies(
+    current_user: UserRetrieveSchema = Depends(get_current_user),
+) -> UserRetrieveSchema:
+    return current_user
+
+
+@router.get("/me/purchased-movies", response_model=list[MovieOut])
+async def get_my_purchased_movies(
+    current_user: UserRetrieveSchema = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> List[MovieOut]:
+    stmt = (
+        select(PurchasedMovie)
+        .where(PurchasedMovie.user_id == current_user.id)
+        .options(selectinload(PurchasedMovie.movie))
+    )
+    result = await db.execute(stmt)
+    purchased_movies = result.scalars().all()
+
+    if not purchased_movies:
+        raise HTTPException(status_code=404, detail="You have no purchased movies")
+
+    return [MovieOut.model_validate(purchase.movie) for purchase in purchased_movies]

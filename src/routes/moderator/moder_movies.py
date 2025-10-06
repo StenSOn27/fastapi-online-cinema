@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
-from src.crud import get_directors_by_ids, get_genres_by_ids, get_stars_by_ids
+from src.database.validators import validate_movie_attributes
 from src.schemas.movies import MovieCreate, MovieRetrieve, MovieUpdate
-from src.database.models.movies import Movie
+from src.database.models.movies import Movie, PurchasedMovie
 from src.config.dependencies import get_db, require_roles
 from sqlalchemy.orm import selectinload
 
@@ -16,23 +16,7 @@ async def create_movie(
     db: AsyncSession = Depends(get_db),
 ) -> MovieRetrieve:
 
-    if len(movie_data.genre_ids) != len(set(movie_data.genre_ids)):
-        raise HTTPException(status_code=400, detail="Duplicate genre IDs in request")
-    if len(movie_data.star_ids) != len(set(movie_data.star_ids)):
-        raise HTTPException(status_code=400, detail="Duplicate star IDs in request")
-    if len(movie_data.director_ids) != len(set(movie_data.director_ids)):
-        raise HTTPException(status_code=400, detail="Duplicate director IDs in request")
-
-    genres = await get_genres_by_ids(db, movie_data.genre_ids)
-    stars = await get_stars_by_ids(db, movie_data.star_ids)
-    directors = await get_directors_by_ids(db, movie_data.director_ids)
-
-    if len(genres) != len(movie_data.genre_ids):
-        raise HTTPException(status_code=400, detail="Some genres not found")
-    if len(stars) != len(movie_data.star_ids):
-        raise HTTPException(status_code=400, detail="Some stars not found")
-    if len(directors) != len(movie_data.director_ids):
-        raise HTTPException(status_code=400, detail="Some directors not found")
+    genres, stars, directors, regions = await validate_movie_attributes(movie_data, db)
 
     new_movie = Movie(
         name=movie_data.name,
@@ -44,6 +28,7 @@ async def create_movie(
         genres=genres,
         stars=stars,
         directors=directors,
+        regions=regions
     )
 
     db.add(new_movie)
@@ -61,6 +46,7 @@ async def create_movie(
             selectinload(Movie.genres),
             selectinload(Movie.directors),
             selectinload(Movie.stars),
+            selectinload(Movie.regions),
         )
         .where(Movie.id == new_movie.id)
     )
@@ -84,6 +70,7 @@ async def update_movie(
             selectinload(Movie.stars),
             selectinload(Movie.directors),
             selectinload(Movie.certification),
+            selectinload(Movie.regions),
         )
         .where(Movie.id == movie_id)
     )
@@ -91,16 +78,7 @@ async def update_movie(
     if not movie:
         raise HTTPException(status_code=404, detail="Movie not found")
 
-    genres = await get_genres_by_ids(db, movie_data.genre_ids)
-    stars = await get_stars_by_ids(db, movie_data.star_ids)
-    directors = await get_directors_by_ids(db, movie_data.director_ids)
-
-    if len(genres) != len(movie_data.genre_ids):
-        raise HTTPException(status_code=400, detail="Some genres not found")
-    if len(stars) != len(movie_data.star_ids):
-        raise HTTPException(status_code=400, detail="Some stars not found")
-    if len(directors) != len(movie_data.director_ids):
-        raise HTTPException(status_code=400, detail="Some directors not found")
+    genres, stars, directors, regions = await validate_movie_attributes(movie_data, db)
 
     movie.name = movie_data.name
     movie.year = movie_data.year
@@ -111,6 +89,7 @@ async def update_movie(
     movie.genres = genres
     movie.stars = stars
     movie.directors = directors
+    movie.regions = regions
 
     try:
         await db.commit()
@@ -130,6 +109,16 @@ async def delete_movie(
     movie = await db.get(Movie, movie_id)
     if not movie:
         raise HTTPException(status_code=404, detail="Movie not found")
+
+    stmt = select(PurchasedMovie).where(PurchasedMovie.movie_id == movie_id).limit(1)
+    result = await db.execute(stmt)
+    purchased = result.scalar_one_or_none()
+
+    if purchased:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete movie that has been purchased by users"
+        )
 
     await db.delete(movie)
     try:

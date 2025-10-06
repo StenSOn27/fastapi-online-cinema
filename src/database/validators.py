@@ -1,6 +1,12 @@
 import re
+from typing import Tuple
 
 from email_validator import validate_email, EmailNotValidError
+from fastapi import HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.crud import get_directors_by_ids, get_genres_by_ids, get_regions_by_ids, get_stars_by_ids
+from src.schemas.movies import MovieCreate, MovieRetrieve
 
 
 def validate_password_strength(password: str) -> str:
@@ -35,3 +41,51 @@ def validate_email_address(email: str) -> str:
         # not a valid (or deliverable) email address.
         raise ValueError(str(e))
 
+
+async def validate_movie_attributes(
+    movie_data: MovieCreate,
+    db: AsyncSession,
+) -> Tuple:
+    errors = []
+
+    if not movie_data.certification_id:
+        errors.append("Certification id must be provided")
+    if not movie_data.genre_ids or movie_data.genre_ids == [0]:
+        errors.append("At least 1 genre id must be provided")
+    if not movie_data.star_ids or movie_data.star_ids == [0]:
+        errors.append("At least 1 star id must be provided")
+    if not movie_data.director_ids or movie_data.director_ids == [0]:
+        errors.append("At least 1 director id must be provided")
+    if not movie_data.regions_ids or movie_data.regions_ids == [0]:
+        errors.append("At least 1 region id must be provided")
+
+    if len(movie_data.genre_ids) != len(set(movie_data.genre_ids)):
+        errors.append("Duplicate genre IDs in request")
+    if len(movie_data.star_ids) != len(set(movie_data.star_ids)):
+        errors.append("Duplicate star IDs in request")
+    if len(movie_data.director_ids) != len(set(movie_data.director_ids)):
+        errors.append("Duplicate director IDs in request")
+    if len(movie_data.regions_ids) != len(set(movie_data.regions_ids)):
+        errors.append("Duplicate region IDs in request")
+
+    if errors:
+        raise HTTPException(status_code=400, detail=errors)
+
+    genres = await get_genres_by_ids(db, movie_data.genre_ids)
+    stars = await get_stars_by_ids(db, movie_data.star_ids)
+    directors = await get_directors_by_ids(db, movie_data.director_ids)
+    regions = await get_regions_by_ids(db, movie_data.regions_ids)
+
+    if len(genres) != len(movie_data.genre_ids):
+        errors.append("Some genres not found")
+    if len(stars) != len(movie_data.star_ids):
+        errors.append("Some stars not found")
+    if len(directors) != len(movie_data.director_ids):
+        errors.append("Some directors not found")
+    if len(regions) != len(movie_data.regions_ids):
+        errors.append("Some regions not found")
+
+    if errors:
+        raise HTTPException(status_code=400, detail=errors)
+
+    return genres, stars, directors, regions

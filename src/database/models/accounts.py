@@ -2,12 +2,16 @@
 import enum
 from src.utils import generate_secure_token
 from typing import List, Optional
-from sqlalchemy import Boolean, Date, DateTime, Enum, Integer, String, ForeignKey, Text, UniqueConstraint, func
+from sqlalchemy import (
+    Boolean, Date, DateTime,
+    Enum, Integer, String,
+    ForeignKey, Text, UniqueConstraint, func
+)
 from src.database.models.base import Base
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column, relationship
 from src.utils import hash_password
-
+from src.database.models.orders import Order
 
 class UserGroupEnum(str, enum.Enum):
     USER = "user"
@@ -48,6 +52,9 @@ class UserModel(Base):
     group_id: Mapped[int] = mapped_column(ForeignKey("user_groups.id", ondelete="CASCADE"), nullable=False)
     group: Mapped["UserGroupModel"] = relationship("UserGroupModel", back_populates="users")
 
+    region_id: Mapped[int] = mapped_column(ForeignKey("regions.id"))
+    region: Mapped["Region"] = relationship("Region", backref="users")
+
     activation_token: Mapped[Optional["ActivationTokenModel"]] = relationship(
         "ActivationTokenModel",
         back_populates="user",
@@ -63,19 +70,23 @@ class UserModel(Base):
         back_populates="user",
         cascade="all, delete-orphan"
     )
-    
     profile: Mapped[Optional["UserProfileModel"]] = relationship(
         "UserProfileModel",
         back_populates="user",
         cascade="all, delete-orphan"
     )
+    purchased_movies: Mapped[List["PurchasedMovie"]] = relationship(
+        "PurchasedMovie", back_populates="user"
+    )
     likes: Mapped[List["MovieLike"]] = relationship("MovieLike", back_populates="user")
     cart: Mapped["Cart"] = relationship(back_populates="user", uselist=False)
     purchased_movies: Mapped[List["PurchasedMovie"]] = relationship(back_populates="user")
+    orders: Mapped[List["Order"]] = relationship("Order", back_populates="user")
+    payments = relationship("Payment", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<UserModel(id={self.id}, email={self.email}, is_active={self.is_active})>"
-    
+
     @property
     def password(self) -> None:
         raise AttributeError("Password is write-only. Use the setter to set the password.")
@@ -83,6 +94,11 @@ class UserModel(Base):
     @password.setter
     def password(self, raw_password: str) -> None:
         self._hashed_password = hash_password(raw_password)  # type: ignore
+
+    @property
+    def purchased_movie_list(self) -> List["Movie"]:
+        return [purchase.movie for purchase in self.purchased_movies]
+
 
 class UserProfileModel(Base):
     __tablename__ = "user_profiles"
