@@ -1,5 +1,6 @@
 ﻿from datetime import date, datetime, timedelta, timezone
 import enum
+from src.database.models.shopping_cart import Cart
 from src.utils import generate_secure_token
 from typing import List, Optional
 from sqlalchemy import (
