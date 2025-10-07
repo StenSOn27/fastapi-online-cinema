@@ -15,6 +15,6 @@ celery.autodiscover_tasks(["src.tasks"])
 celery.conf.beat_schedule = {
     'delete-expired-tokens-every-hour': {
         'task': 'src.celery_scheduler.tasks.celery_delete_expired_tokens',
-        'schedule': crontab(minute="*/1"),
+        'schedule': crontab(hour="*/1"),
     },
 }
