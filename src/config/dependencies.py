@@ -1,4 +1,3 @@
-from decimal import Decimal
 from typing import Callable, Iterable
 from fastapi import Depends, HTTPException
 from sqlalchemy import select
@@ -14,10 +13,7 @@ from fastapi.security import OAuth2PasswordBearer
 from src.schemas.accounts import UserRetrieveSchema
 from src.database.session_postgres import get_postgresql_db
 from sqlalchemy.ext.asyncio import AsyncSession
-
-
-def get_settings() -> BaseAppSettings:
-    return BaseAppSettings()
+from src.config.settings_instance import get_settings
 
 def get_accounts_email_notificator(
     settings: BaseAppSettings = Depends(get_settings)

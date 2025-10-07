@@ -35,3 +35,5 @@ class BaseAppSettings(BaseSettings):
     POSTGRES_DB: str
     POSTGRES_HOST: str
     POSTGRES_PORT: int = 5432
+
+    

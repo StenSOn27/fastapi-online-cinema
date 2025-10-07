@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from src.config.settings import BaseAppSettings
 from src.schemas.orders import OrderSchema
-from src.config.dependencies import get_checkout_session, get_current_user, get_settings
+from src.config.dependencies import get_checkout_session, get_current_user
+from src.config.settings_instance import get_settings
 from src.schemas.accounts import UserRetrieveSchema
 from src.database.session_postgres import get_postgresql_db
 from src.crud import split_available_movies

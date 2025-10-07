@@ -5,7 +5,8 @@ from sqlalchemy.exc import IntegrityError
 from src.database.validators import validate_movie_attributes
 from src.schemas.movies import MovieCreate, MovieRetrieve, MovieUpdate
 from src.database.models.movies import Movie, PurchasedMovie
-from src.config.dependencies import get_db, require_roles
+from src.config.dependencies import require_roles
+from src.database.session_postgres import get_postgresql_db
 from sqlalchemy.orm import selectinload
 
 router = APIRouter(prefix="/movies")

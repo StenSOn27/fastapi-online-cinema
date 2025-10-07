@@ -3,7 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from src.schemas.movies import StarSchema
 from src.database.models.movies import Star
-from src.config.dependencies import get_db, require_roles
+from src.config.dependencies import require_roles
+from src.database.session_postgres import get_postgresql_db
 
 
 router = APIRouter(prefix="/movies/stars")

@@ -15,7 +15,8 @@ from src.database.models.movies import (
     Genre, Movie, MovieLike,
     Rating, Star, movie_genres
 )
-from src.config.dependencies import get_db, get_current_user
+from src.config.dependencies import get_current_user
+from src.database.session_postgres import get_postgresql_db
 from sqlalchemy.orm import selectinload
 
 

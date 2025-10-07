@@ -7,8 +7,8 @@ from sqlalchemy.exc import IntegrityError
 
 from src.schemas.movies import GenreSchema
 from src.database.models.movies import Genre, movie_genres
-from src.config.dependencies import get_db, require_roles
-
+from src.config.dependencies import require_roles
+from src.database.session_postgres import get_postgresql_db
 
 router = APIRouter(prefix="/movies/genres")
 

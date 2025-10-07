@@ -5,7 +5,8 @@ from src.notifications.interfaces import EmailSenderInterface
 from src.config.settings import BaseAppSettings
 from src.database.models.orders import Order, OrderStatus
 from src.schemas.payment import PaymentHistoryItem, PaymentHistoryResponse, PaymentResponseSchema, PaymentStatusEnum
-from src.config.dependencies import get_accounts_email_notificator, get_current_user, get_settings
+from src.config.dependencies import get_accounts_email_notificator, get_current_user
+from src.config.settings_instance import get_settings
 from src.database.session_postgres import get_postgresql_db
 from src.schemas.accounts import UserRetrieveSchema
 from src.database.models.payment import Payment, PaymentItem
