@@ -9,7 +9,7 @@ from src.config.dependencies import get_db, require_roles
 router = APIRouter(prefix="/movies/stars")
 
 @router.post("/", response_model=StarSchema, dependencies=[Depends(require_roles(["moderator"]))])
-async def create_star(name: str, db: AsyncSession = Depends(get_db)):
+async def create_star(name: str, db: AsyncSession = Depends(get_postgresql_db)):
     star = Star(name=name)
     db.add(star)
     try:
@@ -23,7 +23,7 @@ async def create_star(name: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.put("/{star_id}/", response_model=StarSchema, dependencies=[Depends(require_roles(["moderator"]))])
-async def update_star(star_id: int, name: str, db: AsyncSession = Depends(get_db)):
+async def update_star(star_id: int, name: str, db: AsyncSession = Depends(get_postgresql_db)):
     star = await db.get(Star, star_id)
     if not star:
         raise HTTPException(status_code=404, detail="Star not found")
@@ -39,7 +39,7 @@ async def update_star(star_id: int, name: str, db: AsyncSession = Depends(get_db
     return star
 
 @router.delete("/{star_id}/", status_code=204, dependencies=[Depends(require_roles(["moderator"]))])
-async def delete_star(star_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_star(star_id: int, db: AsyncSession = Depends(get_postgresql_db)):
     star = await db.get(Star, star_id)
     if not star:
         raise HTTPException(status_code=404, detail="Star not found")

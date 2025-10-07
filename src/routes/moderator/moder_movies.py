@@ -13,7 +13,7 @@ router = APIRouter(prefix="/movies")
 @router.post("/", response_model=MovieRetrieve, dependencies=[Depends(require_roles(["moderator"]))])
 async def create_movie(
     movie_data: MovieCreate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_postgresql_db),
 ) -> MovieRetrieve:
 
     genres, stars, directors, regions = await validate_movie_attributes(movie_data, db)
@@ -61,7 +61,7 @@ from sqlalchemy.orm import selectinload
 async def update_movie(
     movie_id: int,
     movie_data: MovieUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_postgresql_db),
 ):
     result = await db.execute(
         select(Movie)
@@ -104,7 +104,7 @@ async def update_movie(
 @router.delete("/{movie_id}/", status_code=204, dependencies=[Depends(require_roles(["moderator"]))])
 async def delete_movie(
     movie_id: int,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_postgresql_db),
 ):
     movie = await db.get(Movie, movie_id)
     if not movie:

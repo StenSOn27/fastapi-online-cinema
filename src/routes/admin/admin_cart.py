@@ -6,7 +6,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 from src.database.models.movies import Movie
 from src.database.models.shopping_cart import Cart, CartItem
-from src.database.session_sqlite import get_db
+from src.database.session_postgres import get_postgresql_db
 from src.config.dependencies import require_roles
 from src.schemas.accounts import UserRetrieveSchema
 from src.schemas.cart import CartMovieItem
@@ -20,7 +20,7 @@ router = APIRouter(prefix="/cart/admin")
 )
 async def get_user_cart(
     user_id: int,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_postgresql_db),
 ):
     try:
         result = await db.execute(

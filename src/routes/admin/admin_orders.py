@@ -18,7 +18,7 @@ async def get_all_orders_for_admin(
     status: Optional[OrderStatus] = Query(None, description="Filter by order status"),
     from_date: Optional[date] = Query(None, description="Filter orders from this date", example="2025-10-04"),
     to_date: Optional[date] = Query(None, description="Filter orders up to this date", example="2025-11-04"),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_postgresql_db),
 ):
     filters = []
 

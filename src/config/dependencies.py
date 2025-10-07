@@ -12,7 +12,7 @@ from src.config.settings import BaseAppSettings
 from src.security.token_manager import JWTTokenManager
 from fastapi.security import OAuth2PasswordBearer
 from src.schemas.accounts import UserRetrieveSchema
-from src.database.session_sqlite import get_db
+from src.database.session_postgres import get_postgresql_db
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -51,7 +51,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_postgresql_db),
     jwt_manager: JWTTokenManager = Depends(get_jwt_manager)
 ) -> UserRetrieveSchema:
     try:

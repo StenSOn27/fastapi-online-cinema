@@ -20,7 +20,7 @@ from src.database.models.accounts import (
     ActivationTokenModel, UserGroupEnum,
     UserModel, UserGroupModel, PasswordResetToken, RefreshToken
 )
-from src.database.session_sqlite import get_db
+from src.database.session_postgres import get_postgresql_db
 from sqlalchemy import cast, delete, select
 from src.utils import hash_password, verify_password
 from src.config.dependencies import get_accounts_email_notificator, get_current_user, get_jwt_manager
@@ -35,7 +35,7 @@ async def register_user(
     request: Request,
     user_data: UserRegisterRequestSchema,
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_postgresql_db),
     email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
 ):
 
@@ -111,7 +111,7 @@ async def register_user(
 async def activate_user(
     token: str, request: Request,
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_postgresql_db),
     email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
 ):
 
@@ -152,7 +152,7 @@ async def activate_user(
 async def resend_activation(
     email: str, request: Request,
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_postgresql_db),
     email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator)
 ):
     try:
@@ -204,7 +204,7 @@ async def change_password(
     request: Request,
     data: ChangePasswordSchema,
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_postgresql_db),
     email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator)
 ):
     user = await get_user_by_email(db, data.email)
@@ -236,7 +236,7 @@ async def reset_password_request(
     request: Request,
     background_tasks: BackgroundTasks,
     user_data: UserResetPasswordSchema,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_postgresql_db),
     email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
 ):
     user = await get_user_by_email(db, user_data.email)
@@ -264,7 +264,7 @@ async def reset_password(
     request: Request,
     user_data: PasswordResetCompleteRequestSchema,
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_postgresql_db),
     email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
 ) -> dict:
 
@@ -304,7 +304,7 @@ async def reset_password(
 @router.post("/login/")
 async def login_user(
         login_data: UserLoginSchema,
-        db: AsyncSession = Depends(get_db),
+        db: AsyncSession = Depends(get_postgresql_db),
         jwt_manager: JWTTokenManager = Depends(get_jwt_manager),
 ) -> UserLoginResponseSchema:
 
@@ -350,7 +350,7 @@ async def login_user(
 @router.post("/refresh/", response_model=TokenRefreshResponseSchema)
 async def refresh_access_token(
         token_data: TokenRefreshRequestSchema,
-        db: AsyncSession = Depends(get_db),
+        db: AsyncSession = Depends(get_postgresql_db),
         jwt_manager: JWTTokenManager = Depends(get_jwt_manager),
 ) -> TokenRefreshResponseSchema:
 
@@ -391,7 +391,7 @@ async def get_my_purchased_movies(
 @router.get("/me/purchased-movies", response_model=list[MovieOut])
 async def get_my_purchased_movies(
     current_user: UserRetrieveSchema = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_postgresql_db)
 ) -> List[MovieOut]:
     stmt = (
         select(PurchasedMovie)
