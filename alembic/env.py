@@ -4,6 +4,7 @@ import asyncio
 from logging.config import fileConfig
 from sqlalchemy import pool
 from alembic import context
+from src.config.settings_instance import get_settings
 
 import sys
 import os
@@ -21,6 +22,15 @@ from src.database.models.payment import *
 print("🧪 Alembic sees tables:", Base.metadata.tables.keys())
 # Alembic Config object
 config = context.config
+
+settings = get_settings()
+
+config.set_main_option(
+    "sqlalchemy.url",
+    f"postgresql+asyncpg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}"
+    f"@{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}"
+)
+
 fileConfig(config.config_file_name)
 
 
