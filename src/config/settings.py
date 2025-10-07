@@ -29,3 +29,9 @@ class BaseAppSettings(BaseSettings):
     JWT_SIGNING_ALGORITHM: str = os.getenv("JWT_SIGNING_ALGORITHM", "HS256")
 
     STRIPE_API_KEY: str
+    
+    POSTGRES_USER: str
+    POSTGRES_PASSWORD: str
+    POSTGRES_DB: str
+    POSTGRES_HOST: str
+    POSTGRES_PORT: int = 5432
