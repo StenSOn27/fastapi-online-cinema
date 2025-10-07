@@ -7,7 +7,8 @@ from datetime import date
 
 from src.database.models.orders import Order, OrderStatus
 from src.schemas.orders import OrderSchema
-from src.config.dependencies import get_db, require_roles
+from src.config.dependencies import require_roles
+from src.database.session_postgres import get_postgresql_db
 
 
 router = APIRouter(prefix="/admin/orders")
@@ -18,7 +19,7 @@ async def get_all_orders_for_admin(
     status: Optional[OrderStatus] = Query(None, description="Filter by order status"),
     from_date: Optional[date] = Query(None, description="Filter orders from this date", example="2025-10-04"),
     to_date: Optional[date] = Query(None, description="Filter orders up to this date", example="2025-11-04"),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_postgresql_db),
 ):
     filters = []
 

@@ -15,7 +15,8 @@ from src.database.models.movies import (
     Genre, Movie, MovieLike,
     Rating, Star, movie_genres
 )
-from src.config.dependencies import get_db, get_current_user
+from src.config.dependencies import get_current_user
+from src.database.session_postgres import get_postgresql_db
 from sqlalchemy.orm import selectinload
 
 
@@ -23,7 +24,7 @@ router = APIRouter(prefix="/movies")
 
 @router.get("/", response_model=List[MovieListItem])
 async def movies_list(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_postgresql_db),
     limit: int = Query(10, ge=1),
     page: int = Query(1, ge=1),
     year: int | None = Query(None),
@@ -73,7 +74,7 @@ async def movies_list(
     return result.scalars().all()
 
 @router.get("/genres/", response_model=List[GenreCount])
-async def get_genres_with_counts(db: AsyncSession = Depends(get_db)):
+async def get_genres_with_counts(db: AsyncSession = Depends(get_postgresql_db)):
     stmt = (
         select(
             Genre.id,
@@ -89,7 +90,7 @@ async def get_genres_with_counts(db: AsyncSession = Depends(get_db)):
     return [GenreCount(id=row.id, name=row.name, movie_count=row.movie_count) for row in rows]
 
 @router.get("/{movie_id}/", response_model=MovieRetrieve)
-async def get_movie(movie_id: int, db: AsyncSession = Depends(get_db)) -> MovieRetrieve:
+async def get_movie(movie_id: int, db: AsyncSession = Depends(get_postgresql_db)) -> MovieRetrieve:
     stmt = select(Movie).options(
         selectinload(Movie.certification),
         selectinload(Movie.genres),
@@ -109,7 +110,7 @@ async def get_movie(movie_id: int, db: AsyncSession = Depends(get_db)) -> MovieR
 @router.post("/{movie_id}/like")
 async def like_movie(
     movie_id: int,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_postgresql_db),
     user: UserRetrieveSchema = Depends(get_current_user)
 ) -> dict:
     movie = (await db.scalars(select(Movie).where(Movie.id == movie_id))).first()
@@ -144,7 +145,7 @@ async def like_movie(
 @router.post("/{movie_id}/dislike")
 async def dislike_movie(
     movie_id: int,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_postgresql_db),
     user: UserRetrieveSchema = Depends(get_current_user)
 ) -> dict:
     movie = (await db.scalars(select(Movie).where(Movie.id == movie_id))).first()
@@ -180,7 +181,7 @@ async def dislike_movie(
 async def create_comment(
     movie_id: int,
     comment_data: CommentCreate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_postgresql_db),
     user: UserRetrieveSchema = Depends(get_current_user)
 ):
     movie = await db.get(Movie, movie_id)
@@ -206,7 +207,7 @@ async def create_comment(
 @router.get("/{movie_id}/comments", response_model=List[CommentRetrieve])
 async def get_comments(
     movie_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_postgresql_db)
 ) -> List[CommentRetrieve]:
     result = await db.execute(
         select(Comment)
@@ -218,7 +219,7 @@ async def get_comments(
 @router.post("/favorites/{movie_id}", status_code=201)
 async def add_to_favorites(
     movie_id: int,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_postgresql_db),
     user: UserRetrieveSchema = Depends(get_current_user),
 ):
     movie = await db.scalar(select(Movie).where(Movie.id == movie_id))
@@ -243,7 +244,7 @@ async def add_to_favorites(
 @router.delete("/favorites/{movie_id}", status_code=204)
 async def remove_from_favorites(
     movie_id: int,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_postgresql_db),
     user: UserRetrieveSchema = Depends(get_current_user),
 ):
     favorite = await db.scalar(
@@ -261,7 +262,7 @@ async def remove_from_favorites(
 
 @router.get("/favorites", response_model=List[MovieListItem])
 async def get_favorite_movies(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_postgresql_db),
     user: UserRetrieveSchema = Depends(get_current_user),
 ):
     stmt = (
@@ -277,7 +278,7 @@ async def get_favorite_movies(
 async def rate_movie(
     movie_id: int,
     rating: int,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_postgresql_db),
     user: UserModel = Depends(get_current_user),
 ):
     if not (1 <= rating <= 10):

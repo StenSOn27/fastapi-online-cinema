@@ -7,13 +7,13 @@ from sqlalchemy.exc import IntegrityError
 
 from src.schemas.movies import GenreSchema
 from src.database.models.movies import Genre, movie_genres
-from src.config.dependencies import get_db, require_roles
-
+from src.config.dependencies import require_roles
+from src.database.session_postgres import get_postgresql_db
 
 router = APIRouter(prefix="/movies/genres")
 
 @router.post("/", response_model=GenreSchema, dependencies=[Depends(require_roles(["moderator"]))])
-async def create_genre(name: str, db: AsyncSession = Depends(get_db)):
+async def create_genre(name: str, db: AsyncSession = Depends(get_postgresql_db)):
     genre = Genre(name=name)
     db.add(genre)
     try:
@@ -27,7 +27,7 @@ async def create_genre(name: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.put("/{genre_id}/", response_model=GenreSchema, dependencies=[Depends(require_roles(["moderator"]))])
-async def update_genre(genre_id: int, name: str, db: AsyncSession = Depends(get_db)):
+async def update_genre(genre_id: int, name: str, db: AsyncSession = Depends(get_postgresql_db)):
     genre = await db.get(Genre, genre_id)
     if not genre:
         raise HTTPException(status_code=404, detail="Genre not found")
@@ -47,7 +47,7 @@ async def update_genre(genre_id: int, name: str, db: AsyncSession = Depends(get_
     return GenreSchema.model_validate(genre)
 
 @router.delete("/{genre_id}/", status_code=204, dependencies=[Depends(require_roles(["moderator"]))])
-async def delete_genre(genre_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_genre(genre_id: int, db: AsyncSession = Depends(get_postgresql_db)):
     genre = await db.get(Genre, genre_id)
     if not genre:
         raise HTTPException(status_code=404, detail="Genre not found")

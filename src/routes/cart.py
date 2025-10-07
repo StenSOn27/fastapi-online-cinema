@@ -6,7 +6,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 from src.database.models.movies import Movie, PurchasedMovie
 from src.database.models.shopping_cart import Cart, CartItem
-from src.database.session_sqlite import get_db
+from src.database.session_postgres import get_postgresql_db
 from src.config.dependencies import get_current_user
 from src.schemas.accounts import UserRetrieveSchema
 from src.schemas.cart import CartAddItemSchema, CartRemoveItemSchema, CartMovieItem
@@ -17,7 +17,7 @@ router = APIRouter(prefix="/cart")
 async def add_movie_to_cart(
     item: CartAddItemSchema,
     current_user: UserRetrieveSchema = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_postgresql_db),
 ):
     result = await db.execute(
         select(Cart).where(Cart.user_id == current_user.id)
@@ -72,7 +72,7 @@ async def add_movie_to_cart(
 @router.get("/", response_model=List[CartMovieItem])
 async def get_cart(
     current_user: UserRetrieveSchema = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_postgresql_db),
 ):
     result = await db.execute(
         select(CartItem)
@@ -90,7 +90,7 @@ async def get_cart(
 async def remove_movie_from_cart(
     item: CartRemoveItemSchema,
     current_user: UserRetrieveSchema = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_postgresql_db),
 ):
     try:
         result = await db.execute(
@@ -122,7 +122,7 @@ from sqlalchemy import delete
 @router.delete("/clear/", status_code=204)
 async def clear_cart(
     current_user: UserRetrieveSchema = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_postgresql_db),
 ):
     try:
         result = await db.execute(

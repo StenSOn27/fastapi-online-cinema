@@ -5,9 +5,10 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from src.config.settings import BaseAppSettings
 from src.schemas.orders import OrderSchema
-from src.config.dependencies import get_checkout_session, get_current_user, get_settings
+from src.config.dependencies import get_checkout_session, get_current_user
+from src.config.settings_instance import get_settings
 from src.schemas.accounts import UserRetrieveSchema
-from src.database.session_sqlite import get_db
+from src.database.session_postgres import get_postgresql_db
 from src.crud import split_available_movies
 from src.database.models.movies import Movie
 from src.database.models.shopping_cart import Cart, CartItem
@@ -21,7 +22,7 @@ router = APIRouter(prefix="/orders")
 @router.post("/create/")
 async def create_order_from_cart(
     current_user: UserRetrieveSchema = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_postgresql_db),
 ):
     cart_movie_ids = (await db.execute(
         sa.select(CartItem.movie_id)
@@ -98,7 +99,7 @@ async def create_order_from_cart(
 
 @router.get("/", response_model=List[OrderSchema])
 async def get_orders_list(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_postgresql_db),
     current_user: UserRetrieveSchema = Depends(get_current_user),
 ) -> List[OrderSchema]:
 
@@ -119,7 +120,7 @@ async def get_orders_list(
 async def cancel_order_before_payment(
     order_id: int,
     current_user: UserRetrieveSchema = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_postgresql_db)
 ):
     try:
         stmt = (
@@ -150,7 +151,7 @@ async def cancel_order_before_payment(
 @router.post("/confirm/")
 async def confirm_order(
     order_id: int,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_postgresql_db),
     user: UserRetrieveSchema = Depends(get_current_user),
     settings: BaseAppSettings = Depends(get_settings)
 ) -> dict:
